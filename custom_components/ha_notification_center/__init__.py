@@ -158,6 +158,11 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
             return
 
         source_id = entity_id.replace("binary_sensor.", "")
+
+        # Skip aggregate/summary sensors — they're not real notification sources
+        if source_id in ("notification_any_active", "notification_any_critical", "notification_any_warning"):
+            return
+
         is_on = new_state.state == "on"
         was_on = old_state.state == "on" if old_state else False
 
