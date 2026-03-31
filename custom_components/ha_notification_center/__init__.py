@@ -1,16 +1,10 @@
 """UNiNUS Notification Center - HA custom integration."""
 from __future__ import annotations
 
-import copy
-import hashlib
-import json
 import logging
 from datetime import timedelta
-from pathlib import Path
 from typing import Any
 
-from homeassistant.components import frontend
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import (
@@ -53,83 +47,6 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 SCAN_INTERVAL = timedelta(seconds=5)
-CARD_FILE = "ha-notification-center-card.js"
-CARD_STATIC_URL = f"/{DOMAIN}/{CARD_FILE}"
-CARD_VERSION = "1.0.3"
-
-
-def _get_resources_path(hass: HomeAssistant) -> Path:
-    """Return Lovelace resources storage path."""
-    return Path(hass.config.config_dir) / ".storage" / "lovelace_resources"
-
-
-def _resource_entry(url: str, existing: dict | None = None) -> dict:
-    """Build a normalized Lovelace resource entry."""
-    return {
-        "url": url,
-        "type": "module",
-        "id": (existing or {}).get("id")
-        or hashlib.md5(url.encode("utf-8")).hexdigest(),
-    }
-
-
-def _register_lovelace_resource(hass: HomeAssistant, url: str) -> None:
-    """Persist card resource in lovelace_resources without touching other resources."""
-    res_path = _get_resources_path(hass)
-
-    try:
-        with open(res_path, encoding="utf-8") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        data = {
-            "version": 1,
-            "minor_version": 1,
-            "key": "lovelace_resources",
-            "data": {"resources": [], "items": []},
-        }
-    except json.JSONDecodeError as err:
-        _LOGGER.error("Refusing to overwrite invalid lovelace_resources JSON: %s", err)
-        return
-
-    data_block = data.setdefault("data", {})
-    items = data_block.get("items") if isinstance(data_block.get("items"), list) else []
-    resources = (
-        data_block.get("resources")
-        if isinstance(data_block.get("resources"), list)
-        else []
-    )
-
-    merged: list[dict] = []
-    seen_urls: set[str] = set()
-    for source in (items, resources):
-        for item in source:
-            if not isinstance(item, dict):
-                continue
-            item_url = item.get("url")
-            if not item_url or item_url in seen_urls:
-                continue
-            merged.append(_resource_entry(item_url, item))
-            seen_urls.add(item_url)
-
-    target_index = next(
-        (
-            i
-            for i, item in enumerate(merged)
-            if CARD_FILE in item.get("url", "") or f"/{DOMAIN}/" in item.get("url", "")
-        ),
-        None,
-    )
-    if target_index is None:
-        merged.append(_resource_entry(url))
-    else:
-        merged[target_index] = _resource_entry(url, merged[target_index])
-
-    data_block["items"] = copy.deepcopy(merged)
-    data_block["resources"] = copy.deepcopy(merged)
-
-    with open(res_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-        f.write("\n")
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -143,59 +60,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     domain_data["email_service"] = None
     domain_data["critical_repeat_interval"] = 10
     domain_data["battery_threshold"] = 20
-
-    card_path = Path(__file__).parent / "www" / CARD_FILE
-    if card_path.is_file() and not domain_data.get("card_static_registered"):
-        try:
-            await hass.http.async_register_static_paths(
-                [StaticPathConfig(CARD_STATIC_URL, str(card_path), cache_headers=False)]
-            )
-            domain_data["card_static_registered"] = True
-            _LOGGER.info(
-                "Notification Center card static path registered: %s -> %s",
-                CARD_STATIC_URL,
-                card_path,
-            )
-        except RuntimeError:
-            domain_data["card_static_registered"] = True
-            _LOGGER.debug(
-                "Notification Center card static path already registered: %s",
-                CARD_STATIC_URL,
-            )
-    elif not card_path.is_file():
-        _LOGGER.warning("Notification Center card JS file not found: %s", card_path)
-
-    if card_path.is_file() and not domain_data.get("card_resource_registered"):
-        card_resource_url = f"{CARD_STATIC_URL}?v={CARD_VERSION}"
-        try:
-            frontend.add_extra_js_url(hass, card_resource_url)
-            domain_data["card_resource_registered"] = True
-            domain_data["card_resource_url"] = card_resource_url
-            _LOGGER.info(
-                "Notification Center card frontend resource registered: %s",
-                card_resource_url,
-            )
-        except ValueError:
-            domain_data["card_resource_registered"] = True
-            domain_data["card_resource_url"] = card_resource_url
-            _LOGGER.debug(
-                "Notification Center card frontend resource already registered: %s",
-                card_resource_url,
-            )
-
-        try:
-            await hass.async_add_executor_job(
-                _register_lovelace_resource, hass, card_resource_url
-            )
-            _LOGGER.info(
-                "Notification Center card Lovelace resource persisted: %s",
-                card_resource_url,
-            )
-        except OSError as err:
-            _LOGGER.warning(
-                "Failed to persist Notification Center Lovelace resource: %s",
-                err,
-            )
 
     return True
 

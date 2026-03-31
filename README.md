@@ -19,7 +19,7 @@ Home Assistant 通知中心 — 一站式通知管理整合，支援分級、自
 | ⏰ **Snooze** | 暫停通知 1h / 4h / 8h / 24h，使用 HA Storage 儲存（無字元限制） |
 | 🔁 **Critical 重複** | 緊急通知每隔 N 分鐘自動重送，直到 Acknowledge |
 | ✅ **自動解除** | 通知源狀態恢復正常 → 自動清除 |
-| 🎨 **Lovelace 卡片** | 自訂通知中心卡片（晶片 + 浮動面板 + Snooze / Ack 按鈕） |
+| 🎨 **Lovelace 卡片** | 搭配獨立 HACS Dashboard repo `ha-notification-center-card` 使用 |
 
 ---
 
@@ -32,6 +32,24 @@ Home Assistant 通知中心 — 一站式通知管理整合，支援分級、自
 3. 類別: **Integration**
 4. 安裝「UNiNUS Notification Center」
 5. **重啟 Home Assistant**
+
+### Lovelace 卡片（獨立 HACS Dashboard Repo）
+
+這個 repo 現在只負責 **Integration**。Lovelace 卡片已拆成獨立 repo：
+
+- `https://github.com/ivanlee1007/ha-notification-center-card`
+
+安裝方式：
+
+1. HACS → **Dashboard** → 右上角 `⋮` → **自訂儲存庫**
+2. URL: `https://github.com/ivanlee1007/ha-notification-center-card`
+3. 類別: **Dashboard**
+4. 安裝 `UNiNUS Notification Center Card`
+5. 到 **設定 → 儀表板 → 資源** 確認 HACS 自動加入：
+
+```text
+/hacsfiles/ha-notification-center-card/ha-notification-center-card.js
+```
 
 ### 手動安裝
 
@@ -195,21 +213,13 @@ binary_sensor:
 
 ## Lovelace 卡片
 
-### 安裝
-
-整合啟用後會自動註冊 JS 檔案，直接在 Lovelace 中使用：
+卡片已拆成獨立 HACS Dashboard repo，安裝完成後可直接在 Lovelace 中使用：
 
 ```yaml
 type: custom:ha-notification-center-card
 show_chip: true
 show_panel: true
 max_items: 20
-```
-
-如果 HA 前端快取或資源註冊異常，可手動在 **設定 → 儀表板 → 資源** 加入：
-
-```text
-/ha_notification_center/ha-notification-center-card.js?v=1.0.3
 ```
 
 或使用內建 YAML 模板（需安裝 [button-card](https://github.com/custom-cards/button-card)）：
