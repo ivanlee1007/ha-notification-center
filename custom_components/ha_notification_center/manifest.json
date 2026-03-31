@@ -1,12 +1,14 @@
 {
   "domain": "ha_notification_center",
   "name": "UNiNUS Notification Center",
-  "codeowners": ["@ivanlee1007"],
+  "codeowners": [
+    "@ivanlee1007"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/ivanlee1007/ha-notification-center",
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/ivanlee1007/ha-notification-center/issues",
   "requirements": [],
-  "version": "1.1.0"
+  "version": "1.1.1"
 }

@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_STATE_CHANGED, Platform
 from homeassistant.core import (
     CoreState,
     Event,
@@ -16,7 +16,7 @@ from homeassistant.core import (
     State,
     callback,
 )
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -230,10 +230,11 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
         hass.data[DOMAIN]["active_notifications"] = active_notifications
 
     # Set up state change tracking after HA starts
+    # NOTE: async_track_state_change_event does NOT support glob patterns,
+    # so we use hass.bus.async_listen(EVENT_STATE_CHANGED) and filter in
+    # _handle_state_change via entity_id.startswith("binary_sensor.notification_").
     async def _setup_tracking(event: Event) -> None:
-        async_track_state_change_event(
-            hass, "binary_sensor.notification_*", _handle_state_change
-        )
+        hass.bus.async_listen(EVENT_STATE_CHANGED, _handle_state_change)
         _LOGGER.info("Notification state tracking started")
 
     if hass.state == CoreState.running:
