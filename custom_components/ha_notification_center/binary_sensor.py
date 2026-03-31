@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, Callable
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -23,13 +24,15 @@ async def async_setup_entry(
     async_add_entities,
 ) -> None:
     """Set up binary sensor entities."""
-    async_add_entities(
-        [
-            NotificationAnyActiveSensor(hass),
-            NotificationAnyCriticalSensor(hass),
-            NotificationAnyWarningSensor(hass),
-        ]
-    )
+    sensors: list[BinarySensorEntity] = [
+        NotificationAnyActiveSensor(hass),
+        NotificationAnyCriticalSensor(hass),
+        NotificationAnyWarningSensor(hass),
+    ]
+    async_add_entities(sensors)
+
+    # Register sensors so __init__.py can trigger state updates
+    hass.data[DOMAIN]["binary_sensors"] = sensors
 
 
 class NotificationAnyActiveSensor(BinarySensorEntity):

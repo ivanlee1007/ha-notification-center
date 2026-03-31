@@ -229,6 +229,20 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
         # Store active notifications for sensor platform
         hass.data[DOMAIN]["active_notifications"] = active_notifications
 
+        # Force binary sensor entities to re-evaluate
+        for sensor in hass.data[DOMAIN].get("binary_sensors", []):
+            try:
+                sensor.async_write_ha_state()
+            except Exception as err:
+                _LOGGER.debug("Failed to update binary sensor state: %s", err)
+
+        # Force sensor entities to re-evaluate
+        for sensor in hass.data[DOMAIN].get("sensors", []):
+            try:
+                sensor.async_write_ha_state()
+            except Exception as err:
+                _LOGGER.debug("Failed to update sensor state: %s", err)
+
     # Set up state change tracking after HA starts
     # NOTE: async_track_state_change_event does NOT support glob patterns,
     # so we use hass.bus.async_listen(EVENT_STATE_CHANGED) and filter in

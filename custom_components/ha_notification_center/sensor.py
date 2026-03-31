@@ -33,13 +33,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sensor entities."""
-    async_add_entities(
-        [
-            NotificationFeedSensor(hass),
-            NotificationCountSensor(hass, "warning"),
-            NotificationCountSensor(hass, "critical"),
-        ]
-    )
+    sensors: list[SensorEntity] = [
+        NotificationFeedSensor(hass),
+        NotificationCountSensor(hass, "warning"),
+        NotificationCountSensor(hass, "critical"),
+    ]
+    async_add_entities(sensors)
+
+    # Register sensors so __init__.py can trigger state updates
+    hass.data[DOMAIN]["sensors"] = sensors
 
 
 class NotificationFeedSensor(SensorEntity):
