@@ -209,7 +209,7 @@ max_items: 20
 如果 HA 前端快取或資源註冊異常，可手動在 **設定 → 儀表板 → 資源** 加入：
 
 ```text
-/ha_notification_center/ha-notification-center-card.js?v=1.0.2
+/ha_notification_center/ha-notification-center-card.js?v=1.0.3
 ```
 
 或使用內建 YAML 模板（需安裝 [button-card](https://github.com/custom-cards/button-card)）：
