@@ -57,6 +57,9 @@ Home Assistant 通知中心 — 一站式通知管理整合，支援分級、自
 cd /config
 mkdir -p custom_components/ha_notification_center
 # 將 custom_components/ha_notification_center/ 下的所有檔案複製進去
+
+# 可選：安裝 button-card 模板
+cp -r www/button_card_templates /config/www/
 ```
 
 重啟 Home Assistant。
@@ -121,12 +124,12 @@ automation:
 
 | 實體 | 類型 | 說明 |
 |---|---|---|
-| `sensor.ha_notification_center_feed` | sensor | 通知數量（attributes 含完整通知列表） |
-| `sensor.ha_notification_center_count_warning` | sensor | Warning 通知數 |
-| `sensor.ha_notification_center_count_critical` | sensor | Critical 通知數 |
-| `binary_sensor.ha_notification_center_any_active` | binary_sensor | 有通知活躍時為 `on` |
-| `binary_sensor.ha_notification_center_any_critical` | binary_sensor | 有 Critical 通知時為 `on` |
-| `binary_sensor.ha_notification_center_any_warning` | binary_sensor | 有 Warning/Critical 通知時為 `on` |
+| `sensor.notification_feed` | sensor | 通知數量（attributes 含完整通知列表） |
+| `sensor.notification_count_warning` | sensor | Warning 通知數 |
+| `sensor.notification_count_critical` | sensor | Critical 通知數 |
+| `binary_sensor.notification_any_active` | binary_sensor | 有通知活躍時為 `on` |
+| `binary_sensor.notification_any_critical` | binary_sensor | 有 Critical 通知時為 `on` |
+| `binary_sensor.notification_any_warning` | binary_sensor | 有 Warning/Critical 通知時為 `on` |
 
 ### Service Call
 
@@ -222,14 +225,24 @@ show_panel: true
 max_items: 20
 ```
 
-或使用內建 YAML 模板（需安裝 [button-card](https://github.com/custom-cards/button-card)）：
+或使用 button-card 模板（需安裝 [button-card](https://github.com/custom-cards/button-card)）：
 
-```yaml
-# 將 www/notif_chip_2.yaml 加入你的 button_card_templates
-type: custom:button-card
-entity: sensor.ha_notification_center_feed
-template: notif_chip_2
-```
+1. 將 repo 內的 `www/button_card_templates/` 複製到你的 HA config 目錄：
+   ```bash
+   cp -r www/button_card_templates /config/www/
+   ```
+2. 在 Lovelace 的 `configuration.yaml` 或 dashboard config 加入：
+   ```yaml
+   button_card_templates: !include_dir_merge_named www/button_card_templates/
+   ```
+3. 在 Lovelace 中使用：
+   ```yaml
+   type: custom:button-card
+   entity: sensor.notification_feed
+   template: notif_chip_2
+   ```
+
+可用模板：`notif_chip_2`、`notif_list`、`notif_pills`、`notif_banner`（均依賴 `notif_shared`）
 
 ---
 

@@ -1,0 +1,468 @@
+# =============================================================================
+# notif_chip_2 — Button Card Template
+# =============================================================================
+# Like notif_chip but without hover animation and with floating
+# individual cards in the dropdown instead of a closed list.
+#
+# Snooze options: 1h | 4h | Tomorrow | Day after
+# Snooze fires:   event notification_snooze {slug, until}
+#
+# Add this to your button_card_templates configuration:
+#   button_card_templates: !include_dir_merge_named lovelace/button_card_templates/
+#
+# Usage:
+#   type: custom:button-card
+#   entity: sensor.notification_feed
+#   template: notif_chip_2
+# =============================================================================
+
+notif_chip_2:
+  template:
+    - notif_shared
+  show_icon: true
+  extra_styles: |
+    ha-card {
+      position: relative;
+      z-index: 1;
+      overflow: visible !important;
+      transition: none;
+    }
+    ha-card:hover,
+    ha-card:active {
+      transform: none !important;
+      filter: none !important;
+    }
+    ha-card:hover #img-cell,
+    ha-card:active #img-cell {
+      transform: none !important;
+    }
+    ha-card:hover #icon,
+    ha-card:active #icon {
+      transform: none !important;
+    }
+    ha-card:hover #hint,
+    ha-card:active #hint {
+      opacity: 0 !important;
+    }
+  triggers_update:
+    - sensor.notification_feed
+    - var.notification_snooze_map
+    - input_boolean.notification_dropdown_open
+
+  variables:
+    label_active:    "aktiv"
+
+  icon: >
+    [[[
+      try {
+        // The bell icon reflects both notification count and dropdown state so the
+        // chip communicates whether the panel is currently expanded.
+        const open = states['input_boolean.notification_dropdown_open']
+          && states['input_boolean.notification_dropdown_open'].state === 'on';
+        const count = parseInt(entity.state) || 0;
+        if (open && count > 0) return 'mdi:bell-ring';
+        if (count > 0) return 'mdi:bell-badge';
+      } catch(e) {}
+      return 'mdi:bell-outline';
+    ]]]
+
+  styles:
+    card:
+      - font-family: "Dosis, -apple-system, system-ui, Roboto, Noto, sans-serif"
+      - width: 40px
+      - min-width: 40px
+      - height: 40px
+      - padding: 0
+      - margin: 0
+      - border-radius: 999px
+      - border: none
+      - background: none
+      - overflow: visible
+      - transform-origin: center bottom
+      - transition: "transform .22s cubic-bezier(.2,.8,.2,1), filter .22s ease"
+      - --button-card-ripple-color: transparent !important
+      - --button-card-ripple-hover-opacity: 0 !important
+      - --ha-card-ripple-color: transparent !important
+      - --ha-ripple-hover-opacity: 0 !important
+    grid:
+      - grid-template-areas: '"i"'
+      - grid-template-columns: 1fr
+      - grid-template-rows: 1fr
+    img_cell:
+      - place-self: center
+      - width: 40px
+      - height: 40px
+      - border-radius: 50%
+      - backdrop-filter: blur(6px)
+      - transition: "transform .46s cubic-bezier(.22,1,.36,1)"
+      - background: >
+          [[[
+            try {
+              const raw = entity && entity.attributes && entity.attributes.active_json
+                ? entity.attributes.active_json : '[]';
+              const items = JSON.parse(raw);
+              if (items.some(i => i.priority === 'critical'))
+                return 'color-mix(in srgb, var(--error-color, #db4437) 22%, var(--card-background-color, #fff))';
+              if (items.some(i => i.priority === 'warning'))
+                return 'color-mix(in srgb, var(--warning-color, #ff9800) 22%, var(--card-background-color, #fff))';
+              if (parseInt(entity.state) > 0)
+                return 'color-mix(in srgb, var(--info-color, #2196f3) 22%, var(--card-background-color, #fff))';
+            } catch(e) {}
+            return 'var(--card-background-color, #ffffff)';
+          ]]]
+    name:
+      - font-family: "Dosis, -apple-system, system-ui, Roboto, Noto, sans-serif"
+    label:
+      - font-family: "Nunito, -apple-system, system-ui, Noto, Roboto, sans-serif"
+    state:
+      - font-family: "Nunito, -apple-system, system-ui, Noto, Roboto, sans-serif"
+    icon:
+      - place-self: center
+      - width: 30px
+      - height: 30px
+      - transition: "transform .46s cubic-bezier(.22,1,.36,1)"
+      - color: >
+          [[[
+            try {
+              const raw = entity && entity.attributes && entity.attributes.active_json
+                ? entity.attributes.active_json : '[]';
+              const items = JSON.parse(raw);
+              if (items.some(i => i.priority === 'critical')) return 'var(--error-color, #db4437)';
+              if (items.some(i => i.priority === 'warning'))  return 'var(--warning-color, #ff9800)';
+              if (parseInt(entity.state) > 0) return 'var(--info-color, #2196f3)';
+            } catch(e) {}
+            return 'var(--secondary-text-color, #727272)';
+          ]]]
+    custom_fields:
+      hint:
+        - position: absolute
+        - left: 50%
+        - top: calc(100% + 6px)
+        - transform: translate(-50%, -4px)
+        - opacity: 0
+        - pointer-events: none
+        - white-space: nowrap
+        - font-size: 12px
+        - line-height: 1.1
+        - padding: 4px 8px
+        - border-radius: 999px
+        - backdrop-filter: blur(6px)
+        - background: rgba(0, 0, 0, 0.55)
+        - color: white
+        - z-index: 90
+        - transition: "opacity .34s ease, transform .46s cubic-bezier(.22,1,.36,1)"
+      badge:
+        - position: absolute
+        - top: "-4px"
+        - right: "-4px"
+        - min-width: 18px
+        - height: 18px
+        - border-radius: 9px
+        - padding: 0 4px
+        - font-size: 11px
+        - font-weight: "700"
+        - line-height: 18px
+        - text-align: center
+        - color: white
+        - z-index: "10"
+        - pointer-events: none
+        - display: >
+            [[[
+              try { return (parseInt(entity.state) || 0) > 0 ? 'block' : 'none'; }
+              catch(e) { return 'none'; }
+            ]]]
+        - background: "var(--primary-color, #03a9f4)"
+      dropdown:
+        - position: absolute
+        - top: "calc(100% + 8px)"
+        - left: "0"
+        - width: "320px"
+        - background: transparent
+        - border-radius: 0
+        - border: none
+        - box-shadow: none
+        - overflow: visible
+        - z-index: "999"
+        - display: >
+            [[[
+              try {
+                // The dropdown is only rendered when the chip is explicitly open
+                // and there is at least one active notification to show.
+                const open = states['input_boolean.notification_dropdown_open']
+                  && states['input_boolean.notification_dropdown_open'].state === 'on';
+                const count = parseInt(entity.state) || 0;
+                return (open && count > 0) ? 'block' : 'none';
+              } catch(e) { return 'none'; }
+            ]]]
+  tap_action:
+    action: call-service
+    service: input_boolean.toggle
+    service_data:
+      entity_id: input_boolean.notification_dropdown_open
+  custom_fields:
+    hint: "Notifications"
+    badge: >
+      [[[
+        // The badge mirrors the feed count directly; hiding/showing is handled
+        // in CSS so the number can stay a simple string render.
+        try { return String(parseInt(entity.state) || 0); }
+        catch(e) { return '0'; }
+      ]]]
+    dropdown: >
+      [[[
+        try {
+          // The dropdown uses the same active_json stream as list/pills. It renders
+          // the feed in a more compact floating-card presentation.
+          const raw = entity && entity.attributes && entity.attributes.active_json
+            ? entity.attributes.active_json : '[]';
+          let items = JSON.parse(raw);
+
+          if (!items.length) return '';
+
+          const LABELS = {
+            snooze:   variables.label_snooze    || 'Snooze',
+            confirm:  variables.label_confirm   || 'Done',
+            h1:       variables.label_h1        || '1h',
+            h4:       variables.label_h4        || '4h',
+            tomorrow: variables.label_tomorrow  || 'Tomorrow',
+            dayAfter: variables.label_day_after || 'Day after',
+          };
+
+          const order = { critical: 0, warning: 1, info: 2 };
+          items.sort((a, b) => (order[a.priority] ?? 9) - (order[b.priority] ?? 9));
+
+          // color-mix() adapts row backgrounds to any theme's CSS variables automatically.
+          const ps = {
+            critical: { bg: 'color-mix(in srgb, var(--error-color, #db4437) 12%, transparent)',   color: 'var(--error-color, #db4437)',   label: 'CRITICAL' },
+            warning:  { bg: 'color-mix(in srgb, var(--warning-color, #ff9800) 12%, transparent)', color: 'var(--warning-color, #ff9800)', label: 'WARNING'  },
+            info:     { bg: 'color-mix(in srgb, var(--info-color, #2196f3) 9%, transparent)',      color: 'var(--info-color, #2196f3)',    label: 'INFO'     },
+          };
+
+          // Snooze is fired as an event so the automation layer remains the single
+          // place that mutates the shared snooze map.
+          const snoozeUntil = (slug, iso) => {
+            const el = document.querySelector('home-assistant');
+            if (el && el.hass) {
+              el.hass.connection.sendMessagePromise({
+                type: 'fire_event',
+                event_type: 'notification_snooze',
+                event_data: { slug, until: iso }
+              });
+            }
+          };
+
+          const snoozeOptions = (slug) => {
+            const now = new Date();
+            const fmt = (d) => {
+              const pad = (n) => String(n).padStart(2,'0');
+              return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+                + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+            };
+            const h1  = new Date(now.getTime() + 1*60*60*1000);
+            const h4  = new Date(now.getTime() + 4*60*60*1000);
+            const tom = new Date(now); tom.setDate(tom.getDate()+1); tom.setHours(8,0,0,0);
+            const dat = new Date(now); dat.setDate(dat.getDate()+2); dat.setHours(8,0,0,0);
+
+            // Inline snooze controls keep the dropdown self-contained and avoid
+            // opening secondary dialogs from within the floating panel.
+            const btn = (label, iso) =>
+              `<button
+                onclick="event.stopPropagation();(${snoozeUntil.toString()})('${slug}','${iso}')"
+                style="
+                  border:1px solid var(--divider-color, rgba(0,0,0,0.12));border-radius:6px;
+                  background:var(--secondary-background-color, #f2f2f2);
+                  color:var(--primary-text-color, #212121);
+                  font-size:11px;font-weight:600;padding:4px 8px;
+                  cursor:pointer;white-space:nowrap;
+                "
+              >${label}</button>`;
+
+            return `
+              <div onclick="event.stopPropagation()" style="
+                padding:8px 12px;
+                background:var(--secondary-background-color, #f2f2f2);
+                border-top:1px solid var(--divider-color, rgba(0,0,0,0.12));
+                display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+              ">
+                <span style="font-size:10px;font-weight:700;text-transform:uppercase;
+                  color:var(--secondary-text-color, #727272);letter-spacing:0.06em;margin-right:2px;">
+                  Snooze:
+                </span>
+                ${btn(LABELS.h1,       fmt(h1))}
+                ${btn(LABELS.h4,       fmt(h4))}
+                ${btn(LABELS.tomorrow, fmt(tom))}
+                ${btn(LABELS.dayAfter, fmt(dat))}
+              </div>`;
+          };
+
+          // Header: priority legend + count
+          const presentPrios = [...new Set(items.map(i => i.priority))];
+          const legendItems = ['critical','warning','info'].filter(p => presentPrios.includes(p));
+          // The legend is derived from visible priorities only, so snoozed or absent
+          // priorities do not appear in the chip header.
+          const legend = legendItems.map(p => {
+            const s = ps[p];
+            return `<span style="display:inline-flex;align-items:center;gap:4px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0;"></span>
+              <span style="font-size:10px;font-weight:600;color:var(--secondary-text-color, #727272);text-transform:capitalize;">${p}</span>
+            </span>`;
+          }).join('');
+
+          // Legend card — own floating background
+          let html = `
+            <div style="
+              background:${(()=>{
+                  return 'var(--card-background-color, #ffffff)';
+                })()};
+              border-radius:14px;
+              margin-bottom:8px;
+              padding:10px 14px;
+              display:flex;justify-content:space-between;align-items:center;
+              box-shadow:0 8px 32px rgba(0,0,0,0.22),0 2px 8px rgba(0,0,0,0.12);
+            ">
+              <div style="display:flex;gap:10px;align-items:center;">${legend}</div>
+              <span style="
+                font-size:11px;font-weight:700;
+                color:var(--secondary-text-color, #727272);
+                letter-spacing:0.04em;
+              ">${items.length} ${variables.label_active || 'aktiv'}</span>
+            </div>`;
+
+          // Floating individual notification cards
+          html += items.map((item) => {
+            const style = ps[item.priority] || ps.info;
+            const slug = item.slug || item.entity_id.replace('binary_sensor.notification_', '');
+            const snoozeToggleId = `nchip2-snooze-${slug}`;
+
+            let onclick = '';
+            if (item.tap_action === 'url' && item.tap_action_url_path) {
+              onclick = `window.open('${item.tap_action_url_path}','_blank')`;
+            } else if (item.tap_action === 'navigate' && item.tap_action_navigation_path) {
+              onclick = `history.pushState(null,'','${item.tap_action_navigation_path}');window.dispatchEvent(new PopStateEvent('popstate'))`;
+            } else {
+              const eid = item.tap_action_entity || item.entity_id || '';
+              // HTML-string rows must dispatch more-info from the HA root element
+              // to escape the injected markup/shadow boundary reliably.
+              onclick = `event.stopPropagation();const ha=document.querySelector('home-assistant');if(ha){ha.dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId:'${eid}'},bubbles:true,composed:true}));}`;
+            }
+
+            const showSnooze  = item.priority !== 'critical' && !item.confirm_action;
+            const showConfirm = !!item.confirm_action;
+
+            // Rounded square avatar with priority color
+            const avatar = `
+              <div style="
+                width:40px;height:40px;border-radius:12px;flex-shrink:0;
+                background:${style.color};
+                display:flex;align-items:center;justify-content:center;
+                box-shadow:0 2px 8px color-mix(in srgb, ${style.color} 40%, transparent);
+              ">
+                <ha-icon icon="${item.icon || 'mdi:bell-outline'}" style="
+                  --mdc-icon-size:22px;color:white;
+                "></ha-icon>
+              </div>`;
+
+            // Variant C: thin divider + bare icon buttons, no background
+            const actionBar = (showSnooze || showConfirm) ? `
+              <div style="
+                display:flex;align-items:center;gap:4px;
+                padding:0 8px 0 0;
+                border-left:1px solid color-mix(in srgb, ${style.color} 25%, var(--divider-color, rgba(0,0,0,0.12)));
+                margin-left:4px;
+              ">
+                ${showSnooze ? `
+                <button
+                  onclick="event.stopPropagation();
+                    // The dropdown lives inside button-card's shadow DOM; panel
+                    // lookup therefore has to use the current root, not document.
+                    const root=this.getRootNode();
+                    const p=root&&root.getElementById?root.getElementById('${snoozeToggleId}'):null;
+                    if(p){p.style.display=p.style.display==='none'?'block':'none';}"
+                  title="${LABELS.snooze}"
+                  style="
+                    display:inline-flex;align-items:center;justify-content:center;
+                    border:none;background:transparent;padding:6px;
+                    color:var(--secondary-text-color, #727272);opacity:0.6;cursor:pointer;border-radius:8px;
+                    transition:opacity 0.15s,background 0.15s;
+                  "
+                  onmouseover="this.style.opacity='1';this.style.background='rgba(128,128,128,0.1)'"
+                  onmouseout="this.style.opacity='0.6';this.style.background='transparent'"
+                ><ha-icon icon="mdi:timer-outline" style="--mdc-icon-size:18px;"></ha-icon></button>` : ''}
+                ${showConfirm ? `
+                <button
+                  onclick="event.stopPropagation();
+                    // Confirm actions are carried by the normalized feed items and
+                    // executed directly from the frontend with TODAY expansion.
+                    const el=document.querySelector('home-assistant');
+                    if(el&&el.hass){
+                      const svc='${item.confirm_action}'.split('.');
+                      let d={};
+                      try{d=typeof item.confirm_service_data==='string'
+                        ?JSON.parse(item.confirm_service_data)
+                        :Object.assign({},item.confirm_service_data||{});}catch(e){}
+                      const now=new Date();
+                      const pad=n=>String(n).padStart(2,'0');
+                      const today=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+                      Object.keys(d).forEach(k=>{if(d[k]==='TODAY')d[k]=today;});
+                      el.hass.callService(svc[0],svc[1],d);
+                    }"
+                  title="${item.confirm_label || LABELS.confirm}"
+                  style="
+                    display:inline-flex;align-items:center;justify-content:center;
+                    border:none;background:transparent;padding:6px;
+                    color:var(--secondary-text-color, #727272);opacity:0.6;cursor:pointer;border-radius:8px;
+                    transition:opacity 0.15s,background 0.15s;
+                  "
+                  onmouseover="this.style.opacity='1';this.style.background='rgba(128,128,128,0.1)'"
+                  onmouseout="this.style.opacity='0.6';this.style.background='transparent'"
+                ><ha-icon icon="mdi:check" style="--mdc-icon-size:18px;"></ha-icon></button>` : ''}
+              </div>` : '';
+
+            const cardBg = `color-mix(in srgb, ${style.color} 8%, var(--card-background-color, #ffffff))`;
+
+            const glowColor = `color-mix(in srgb, ${style.color} 12%, transparent)`;
+
+            return `
+              <div style="
+                background:${cardBg};
+                border-radius:16px;
+                margin-bottom:8px;
+                overflow:hidden;
+                box-shadow:inset 0 0 12px ${glowColor}, 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+              ">
+                <div
+                  onclick="${onclick}"
+                  onmouseover="this.style.background='rgba(128,128,128,0.08)'"
+                  onmouseout="this.style.background='transparent'"
+                  style="
+                    display:flex;align-items:center;gap:12px;
+                    padding:10px 6px 10px 12px;cursor:pointer;
+                    transition:background 0.15s;
+                  "
+                >
+                  ${avatar}
+                  <div style="flex:1;min-width:0;text-align:left;">
+                    <div style="
+                      font-size:13px;font-weight:600;
+                      color:var(--primary-text-color, #212121);
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                      margin-bottom:2px;
+                    ">${item.summary || ''}</div>
+                    ${item.description ? `
+                    <div style="
+                      font-size:11px;color:var(--secondary-text-color, #727272);
+                      line-height:1.3;
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                    ">${item.description}</div>` : ''}
+                  </div>
+                  ${actionBar}
+                </div>
+                <div id="${snoozeToggleId}" style="display:none;">
+                  ${showSnooze ? snoozeOptions(slug) : ''}
+                </div>
+              </div>`;
+          }).join('');
+
+          return html;
+        } catch(e) { return ''; }
+      ]]]

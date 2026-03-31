@@ -1,0 +1,157 @@
+# =============================================================================
+# notif_banner — Button Card Template
+# =============================================================================
+# Fixed-position critical alert banner. Appears at the top of the screen
+# whenever a critical notification is active. Hidden when none are active.
+#
+# Add this to your button_card_templates configuration:
+#   button_card_templates: !include_dir_merge_named lovelace/button_card_templates/
+#
+# Usage:
+#   type: custom:button-card
+#   entity: sensor.notification_feed
+#   template: notif_banner
+# =============================================================================
+
+notif_banner:
+  show_icon: false
+  show_name: false
+  show_state: false
+  triggers_update:
+    - sensor.notification_feed
+
+  variables:
+    # UI labels — edit here to localise
+    label_critical_alert:  "CRITICAL ALERT"
+    label_critical_alerts: "CRITICAL ALERTS"
+
+  tap_action:
+    action: none
+  styles:
+    card:
+      - padding: 0
+      - border: none
+      - box-shadow: none
+      - background: transparent
+      - overflow: visible
+    custom_fields:
+      banner:
+        - width: 100%
+        - display: block
+  card_mod:
+    style: |
+      :host {
+        position: fixed !important;
+        top: 60px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 420px !important;
+        z-index: 999 !important;
+        pointer-events: auto !important;
+      }
+      ha-card {
+        pointer-events: auto !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+  custom_fields:
+    banner: >
+      [[[
+        try {
+          // The banner consumes the same normalized JSON feed as the other
+          // notification templates, but intentionally renders only critical items.
+          const raw = entity && entity.attributes && entity.attributes.active_json
+            ? entity.attributes.active_json : '[]';
+          const items = JSON.parse(raw).filter(i => i.priority === 'critical');
+          if (!items.length) return '';
+
+          const rows = items.map((item, idx) => {
+            // Row separators are generated here so the outer card can stay a single
+            // floating container while each critical alert still reads as its own row.
+            const border = idx < items.length - 1
+              ? 'border-bottom:1px solid rgba(255,255,255,0.15);' : '';
+
+            let onclick = '';
+            if (item.tap_action === 'url' && item.tap_action_url_path) {
+              onclick = `window.open('${item.tap_action_url_path}','_blank')`;
+            } else if (item.tap_action === 'navigate' && item.tap_action_navigation_path) {
+              onclick = `history.pushState(null,'','${item.tap_action_navigation_path}');window.dispatchEvent(new PopStateEvent('popstate'))`;
+            } else {
+              const eid = item.tap_action_entity || item.entity_id || '';
+              // Rows delegate to the configured entity/action metadata coming from
+              // the aggregated feed instead of maintaining banner-specific logic.
+              onclick = `this.dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId:'${eid}'},bubbles:true,composed:true}))`;
+            }
+
+            return `
+              <div
+                onclick="${onclick}"
+                onmouseover="this.style.filter='brightness(1.08)'"
+                onmouseout="this.style.filter='none'"
+                style="
+                  display:flex;align-items:center;gap:10px;
+                  padding:8px 14px;cursor:pointer;
+                  transition:filter 0.15s;${border}
+                "
+              >
+                <ha-icon icon="${item.icon || 'mdi:bell-alert'}" style="
+                  flex-shrink:0;--mdc-icon-size:20px;color:white;
+                "></ha-icon>
+                <div style="flex:1;min-width:0;text-align:left;">
+                  <div style="
+                    font-size:13px;font-weight:700;color:white;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                  ">${item.summary || ''}</div>
+                  ${item.description ? `<div style="
+                    font-size:11px;color:rgba(255,255,255,0.82);
+                    margin-top:1px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                  ">${item.description}</div>` : ''}
+                </div>
+                <ha-icon icon="mdi:chevron-right" style="
+                  flex-shrink:0;--mdc-icon-size:14px;
+                  color:rgba(255,255,255,0.6);
+                "></ha-icon>
+              </div>`;
+          }).join('');
+
+          const count = items.length;
+          // The header text stays singular/plural here rather than in YAML because
+          // the rendered label depends on the current critical item count.
+          const label = count === 1 ? (variables.label_critical_alert || 'CRITICAL ALERT') : `${count} ${variables.label_critical_alerts || 'CRITICAL ALERTS'}`;
+
+          return `
+            <style>
+              /* The blink animation is scoped to this injected fragment so it does
+                 not leak into the rest of the dashboard. */
+              @keyframes critblink {
+                0%,100% { opacity:1; } 50% { opacity:0.15; }
+              }
+            </style>
+            <div style="
+              background:linear-gradient(135deg, color-mix(in srgb, var(--error-color, #db4437) 85%, #000), var(--error-color, #db4437));
+              border-radius:12px;overflow:hidden;
+              box-shadow:0 2px 10px color-mix(in srgb, var(--error-color, #db4437) 30%, transparent);
+              min-width:280px;
+            ">
+              <div style="
+                display:flex;align-items:center;gap:6px;
+                padding:4px 14px;
+                background:rgba(0,0,0,0.15);
+                border-bottom:1px solid rgba(255,255,255,0.12);
+              ">
+                <span style="
+                  display:inline-block;width:7px;height:7px;border-radius:50%;
+                  background:white;flex-shrink:0;
+                  animation:critblink 1.2s ease-in-out infinite;
+                "></span>
+                <span style="
+                  font-size:10px;font-weight:800;letter-spacing:0.1em;
+                  color:rgba(255,255,255,0.9);text-transform:uppercase;
+                ">${label}</span>
+              </div>
+              ${rows}
+            </div>`;
+        } catch(e) { return ''; }
+      ]]]

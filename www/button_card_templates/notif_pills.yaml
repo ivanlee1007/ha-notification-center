@@ -1,0 +1,379 @@
+# =============================================================================
+# notif_pills — Button Card Template
+# =============================================================================
+# Horizontal strip of pills — one per active notification.
+# Designed for the top row of a grid layout.
+#
+# Each pill shows: Icon + summary text + snooze/confirm action button.
+# Tapping a pill expands an inline snooze/confirm panel below the strip.
+#
+# Requirements:
+#   - custom:button-card
+#   - sensor.notification_feed  (framework)
+#   - var.notification_snooze_map (HACS Variable integration)
+#
+# Usage:
+#   type: custom:button-card
+#   entity: sensor.notification_feed
+#   template: notif_pills
+#   view_layout:
+#     grid-area: boxX
+# =============================================================================
+notif_pills:
+  show_name: false
+  show_icon: false
+  show_state: false
+  show_label: false
+
+  triggers_update:
+    - sensor.notification_feed
+    - var.notification_snooze_map
+
+  variables:
+    label_snooze: "Snooze"
+    label_confirm: "Done"
+    label_h1: "1h"
+    label_h4: "4h"
+    label_tomorrow: "Tomorrow"
+    label_day_after: "Day after"
+
+  tap_action:
+    action: none
+
+  styles:
+    card:
+      - background: transparent
+      - border: none
+      - box-shadow: none
+      - padding: 0
+      - overflow: visible
+    custom_fields:
+      pills:
+        - width: 100%
+        - display: block
+        - overflow: visible
+        - pointer-events: auto
+
+  custom_fields:
+    pills: >
+      [[[
+        try {
+          // The backend feed exposes one normalized JSON array for all UI variants.
+          // Each entry already contains summary, priority, icon, tap_action and
+          // optional confirm metadata, so this template only needs to render it.
+          const raw = entity && entity.attributes && entity.attributes.active_json
+            ? entity.attributes.active_json
+            : '[]';
+          const items = JSON.parse(raw);
+
+          if (!items.length) return html``;
+
+          const LABELS = {
+            snooze: variables.label_snooze || 'Snooze',
+            confirm: variables.label_confirm || 'Done',
+            h1: variables.label_h1 || '1h',
+            h4: variables.label_h4 || '4h',
+            tomorrow: variables.label_tomorrow || 'Tomorrow',
+            dayAfter: variables.label_day_after || 'Day after',
+          };
+
+          const order = { critical: 0, warning: 1, info: 2 };
+          items.sort((a, b) => (order[a.priority] ?? 9) - (order[b.priority] ?? 9));
+
+          // Priority styles stay local to the template so the pill appearance can
+          // evolve independently from the list/dropdown variants.
+          const ps = {
+            critical: {
+              color: 'var(--error-color, #db4437)',
+              bg: 'color-mix(in srgb, var(--error-color, #db4437) 14%, var(--card-background-color, #fff))'
+            },
+            warning: {
+              color: 'var(--warning-color, #ff9800)',
+              bg: 'color-mix(in srgb, var(--warning-color, #ff9800) 14%, var(--card-background-color, #fff))'
+            },
+            info: {
+              color: 'var(--info-color, #2196f3)',
+              bg: 'color-mix(in srgb, var(--info-color, #2196f3) 10%, var(--card-background-color, #fff))'
+            },
+          };
+
+          const fmt = (d) => {
+            const pad = (n) => String(n).padStart(2, '0');
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+              + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+          };
+
+          // Snooze is handled via a frontend event so the automation can update
+          // the shared snooze map without the card calling a service directly.
+          const fireSnooze = (slug, iso) => {
+            const el = document.querySelector('home-assistant');
+            if (el && el.hass) {
+              el.hass.connection.sendMessagePromise({
+                type: 'fire_event',
+                event_type: 'notification_snooze',
+                event_data: { slug, until: iso }
+              });
+            }
+          };
+
+          // Confirm actions are defined per notification source as "domain.service"
+          // plus optional JSON service data. "TODAY" placeholders are expanded here
+          // to keep the source definitions static and reusable.
+          const runConfirm = (item) => {
+            const el = document.querySelector('home-assistant');
+            if (!el || !el.hass || !item.confirm_action) return;
+
+            const svc = item.confirm_action.split('.');
+            let d = {};
+            try {
+              d = typeof item.confirm_service_data === 'string'
+                ? JSON.parse(item.confirm_service_data)
+                : Object.assign({}, item.confirm_service_data || {});
+            } catch (e) {}
+
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+
+            Object.keys(d).forEach((k) => {
+              if (d[k] === 'TODAY') d[k] = today;
+            });
+
+            el.hass.callService(svc[0], svc[1], d);
+          };
+
+          // The panel lives inside button-card's shadow DOM. We therefore resolve
+          // elements from the current component root and close all other pill panels
+          // before opening the requested one.
+          const togglePanel = (ev, panelId) => {
+            ev.stopPropagation();
+            const root = this.shadowRoot || this;
+            if (!root) return;
+
+            const panel = root.getElementById(panelId);
+            if (!panel) return;
+
+            const isOpen = panel.style.display !== 'none';
+            root.querySelectorAll('[id^="npill-panel-"]').forEach((node) => {
+              node.style.display = 'none';
+            });
+            panel.style.display = isOpen ? 'none' : 'block';
+          };
+
+          // The expanded area is rendered inline below its pill so the component can
+          // grow horizontally/vertically inside the grid without using an overlay.
+          const snoozePanel = (slug, color) => {
+            const now = new Date();
+            const h1 = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+            const h4 = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+            const tom = new Date(now);
+            tom.setDate(tom.getDate() + 1);
+            tom.setHours(8, 0, 0, 0);
+
+            const dat = new Date(now);
+            dat.setDate(dat.getDate() + 2);
+            dat.setHours(8, 0, 0, 0);
+
+            const btnStyle = `
+              border:1px solid var(--divider-color, rgba(0,0,0,0.12));
+              border-radius:20px;
+              background:var(--card-background-color, #fff);
+              color:var(--primary-text-color, #212121);
+              font-size:11px;
+              font-weight:600;
+              padding:4px 10px;
+              cursor:pointer;
+              white-space:nowrap;
+            `;
+
+            return html`
+              <div
+                @click=${(ev) => ev.stopPropagation()}
+                style="
+                  display:flex;
+                  gap:6px;
+                  flex-wrap:wrap;
+                  align-items:center;
+                  padding:8px 12px 10px;
+                  border-top:1px solid color-mix(in srgb, ${color} 20%, transparent);
+                  background:color-mix(in srgb, ${color} 6%, var(--card-background-color, #fff));
+                  pointer-events:auto;
+                "
+              >
+                <span style="
+                  font-size:10px;
+                  font-weight:700;
+                  text-transform:uppercase;
+                  color:${color};
+                  letter-spacing:0.06em;
+                  margin-right:2px;
+                ">
+                  ${LABELS.snooze}:
+                </span>
+
+                <button
+                  style="${btnStyle}"
+                  @click=${(ev) => { ev.stopPropagation(); fireSnooze(slug, fmt(h1)); }}
+                >
+                  ${LABELS.h1}
+                </button>
+
+                <button
+                  style="${btnStyle}"
+                  @click=${(ev) => { ev.stopPropagation(); fireSnooze(slug, fmt(h4)); }}
+                >
+                  ${LABELS.h4}
+                </button>
+
+                <button
+                  style="${btnStyle}"
+                  @click=${(ev) => { ev.stopPropagation(); fireSnooze(slug, fmt(tom)); }}
+                >
+                  ${LABELS.tomorrow}
+                </button>
+
+                <button
+                  style="${btnStyle}"
+                  @click=${(ev) => { ev.stopPropagation(); fireSnooze(slug, fmt(dat)); }}
+                >
+                  ${LABELS.dayAfter}
+                </button>
+              </div>
+            `;
+          };
+
+          return html`
+            <div style="
+              display:flex;
+              flex-wrap:wrap;
+              gap:6px;
+              align-items:flex-start;
+              padding:4px 0;
+              pointer-events:auto;
+            ">
+              ${items.map((item) => {
+                const style = ps[item.priority] || ps.info;
+                const slug = item.slug || item.entity_id.replace('binary_sensor.notification_', '');
+                const panelId = `npill-panel-${slug}`;
+                const showSnooze = item.priority !== 'critical' && !item.confirm_action;
+                const showConfirm = !!item.confirm_action;
+
+                return html`
+                  <!-- Pill container stays content-sized in the closed state and
+                       grows naturally once the inline panel is opened. -->
+                  <div style="
+                    display:inline-flex;
+                    flex-direction:column;
+                    border-radius:20px;
+                    overflow:hidden;
+                    background:${style.bg};
+                    box-shadow:inset 0 0 8px color-mix(in srgb, ${style.color} 10%, transparent);
+                    flex-shrink:0;
+                    pointer-events:auto;
+                  ">
+                    <div
+                      @click=${(ev) => togglePanel(ev, panelId)}
+                      style="
+                        display:flex;
+                        /* Two-column row: content cluster on the left, action button
+                           pinned to the current right edge of the pill. */
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:10px;
+                        padding:6px 8px;
+                        cursor:pointer;
+                        pointer-events:auto;
+                        min-width:0;
+                        width:100%;
+                        box-sizing:border-box;
+                      "
+                    >
+                      <div style="
+                        display:flex;
+                        align-items:center;
+                        gap:6px;
+                        min-width:0;
+                        flex:1;
+                      ">
+                        <div style="
+                          width:22px;
+                          height:22px;
+                          border-radius:6px;
+                          flex-shrink:0;
+                          background:${style.color};
+                          display:flex;
+                          align-items:center;
+                          justify-content:center;
+                        ">
+                          <ha-icon
+                            icon="${item.icon || 'mdi:bell-outline'}"
+                            style="--mdc-icon-size:14px; color:white;"
+                          ></ha-icon>
+                        </div>
+
+                        <span style="
+                          min-width:0;
+                          font-size:12px;
+                          font-weight:600;
+                          color:var(--primary-text-color,#212121);
+                          white-space:nowrap;
+                          overflow:hidden;
+                          text-overflow:ellipsis;
+                        ">
+                          ${item.summary || ''}
+                        </span>
+                      </div>
+
+                      ${showConfirm ? html`
+                        <button
+                          @click=${(ev) => { ev.stopPropagation(); runConfirm(item); }}
+                          style="
+                            display:inline-flex;
+                            align-items:center;
+                            justify-content:center;
+                            border:none;
+                            background:transparent;
+                            padding:2px;
+                            color:var(--secondary-text-color,#727272);
+                            opacity:0.6;
+                            cursor:pointer;
+                            border-radius:50%;
+                            flex-shrink:0;
+                          "
+                        >
+                          <ha-icon icon="mdi:check" style="--mdc-icon-size:14px;"></ha-icon>
+                        </button>
+                      ` : showSnooze ? html`
+                        <button
+                          @click=${(ev) => togglePanel(ev, panelId)}
+                          style="
+                            display:inline-flex;
+                            align-items:center;
+                            justify-content:center;
+                            border:none;
+                            background:transparent;
+                            padding:2px;
+                            color:var(--secondary-text-color,#727272);
+                            opacity:0.6;
+                            cursor:pointer;
+                            border-radius:50%;
+                            flex-shrink:0;
+                          "
+                        >
+                          <ha-icon icon="mdi:timer-outline" style="--mdc-icon-size:14px;"></ha-icon>
+                        </button>
+                      ` : html``}
+                    </div>
+
+                    <div id="${panelId}" style="display:none; pointer-events:auto;">
+                      ${showSnooze ? snoozePanel(slug, style.color) : html``}
+                    </div>
+                  </div>
+                `;
+              })}
+            </div>
+          `;
+        } catch (e) {
+          return html``;
+        }
+      ]]]

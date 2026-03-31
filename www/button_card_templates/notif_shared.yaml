@@ -1,0 +1,29 @@
+# =============================================================================
+# notif_shared — Shared Notification Button Card Template
+# =============================================================================
+# Common base template for notification dashboard components.
+# Keeps shared labels and the default display flags in one place so list and chip
+# inherit the same baseline behaviour without duplicating YAML.
+# =============================================================================
+
+notif_shared:
+  show_name: false
+  show_icon: false
+  show_state: false
+  show_label: false
+
+  variables:
+    # Shared localisation keys for list + chip. Components with their own wording
+    # (for example banner and pills) keep those labels locally.
+    label_title:     "Notifications"
+    label_all_clear: "All clear"
+    label_none:      "No notification"
+    label_critical:  "Critical"
+    label_warning:   "Warning"
+    label_info:      "Info"
+    label_snooze:    "Snooze"
+    label_confirm:   "Done"
+    label_h1:        "1h"
+    label_h4:        "4h"
+    label_tomorrow:  "Tomorrow"
+    label_day_after: "Day after"
