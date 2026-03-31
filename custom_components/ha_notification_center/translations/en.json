@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Notification Center",
+        "description": "Configure the notification delivery service and preferences.",
+        "data": {
+          "notify_service": "Mobile push notify service (e.g. notify)",
+          "email_service": "Email notify service (optional, e.g. notify.gmail_smtp)",
+          "critical_repeat_interval": "Critical alert repeat interval (minutes)",
+          "battery_threshold": "Low battery threshold (%)"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one instance of Notification Center is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Notification Center Options",
+        "data": {
+          "notify_service": "Mobile push notify service",
+          "email_service": "Email notify service (optional)",
+          "critical_repeat_interval": "Critical alert repeat interval (minutes)",
+          "battery_threshold": "Low battery threshold (%)"
+        }
+      }
+    }
+  }
+}

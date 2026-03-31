@@ -1,0 +1,78 @@
+register_source:
+  name: Register Notification Source
+  description: Register a notification source with the Notification Center.
+  fields:
+    name:
+      description: "Display name of the notification source."
+      required: true
+      example: "漏水警報"
+      selector:
+        text:
+    icon:
+      description: "MDI icon for the notification."
+      required: false
+      example: "mdi:water-alert"
+      selector:
+        icon:
+    priority:
+      description: "Priority level: info, warning, or critical."
+      required: false
+      default: "info"
+      selector:
+        select:
+          options:
+            - "info"
+            - "warning"
+            - "critical"
+    description:
+      description: "Description text for the notification message."
+      required: false
+      example: "廚房漏水偵測器觸發"
+      selector:
+        text:
+    tap_action_entity:
+      description: "Entity to navigate to when notification is tapped."
+      required: false
+      example: "binary_sensor.water_leak"
+      selector:
+        entity:
+
+snooze:
+  name: Snooze Notification
+  description: Temporarily silence a notification source.
+  fields:
+    source_id:
+      description: "ID of the notification source to snooze."
+      required: true
+      example: "water_leak"
+      selector:
+        text:
+    duration_hours:
+      description: "Duration in hours to snooze."
+      required: false
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 168
+          unit_of_measurement: hours
+
+unsnooze:
+  name: Unsnooze Notification
+  description: Remove snooze from a notification source.
+  fields:
+    source_id:
+      description: "ID of the notification source."
+      required: true
+      selector:
+        text:
+
+acknowledge:
+  name: Acknowledge Notification
+  description: Mark a notification as acknowledged (stops critical repeat).
+  fields:
+    source_id:
+      description: "ID of the notification source to acknowledge."
+      required: true
+      selector:
+        text:

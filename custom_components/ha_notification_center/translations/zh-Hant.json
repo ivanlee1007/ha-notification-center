@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "通知中心",
+        "description": "設定通知推送服務與偏好選項。",
+        "data": {
+          "notify_service": "手機推送通知服務（例如 notify）",
+          "email_service": "Email 通知服務（選填，例如 notify.gmail_smtp）",
+          "critical_repeat_interval": "緊急警報重複間隔（分鐘）",
+          "battery_threshold": "低電量警示閾值（%）"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "通知中心僅允許一個實例。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "通知中心選項",
+        "data": {
+          "notify_service": "手機推送通知服務",
+          "email_service": "Email 通知服務（選填）",
+          "critical_repeat_interval": "緊急警報重複間隔（分鐘）",
+          "battery_threshold": "低電量警示閾值（%）"
+        }
+      }
+    }
+  }
+}
