@@ -84,6 +84,7 @@ class NotificationFeedSensor(SensorEntity):
         return {
             "notifications": notifications,
             "count": len(notifications),
+            "dropdown_open": self._hass.data.get(DOMAIN, {}).get("dropdown_open", False),
         }
 
 

@@ -24,6 +24,7 @@ SERVICE_REGISTER_SOURCE: Final = "register_source"
 SERVICE_SNOOZE: Final = "snooze"
 SERVICE_UNSNOOZE: Final = "unsnooze"
 SERVICE_ACKNOWLEDGE: Final = "acknowledge"
+SERVICE_TOGGLE_DROPDOWN: Final = "toggle_dropdown"
 
 # Events
 EVENT_SOURCE_ACTIVATED: Final = "ha_notification_center_source_activated"

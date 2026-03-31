@@ -38,6 +38,7 @@ from .const import (
     SERVICE_ACKNOWLEDGE,
     SERVICE_REGISTER_SOURCE,
     SERVICE_SNOOZE,
+    SERVICE_TOGGLE_DROPDOWN,
     SERVICE_UNSNOOZE,
 )
 from .storage import NotificationStorage
@@ -60,6 +61,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     domain_data["email_service"] = None
     domain_data["critical_repeat_interval"] = 10
     domain_data["battery_threshold"] = 20
+    domain_data["dropdown_open"] = False
 
     return True
 
@@ -134,10 +136,21 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         storage: NotificationStorage = hass.data[DOMAIN]["storage"]
         await storage.async_acknowledge(source_id)
 
+    async def handle_toggle_dropdown(call: ServiceCall) -> None:
+        """Toggle notification dropdown open/close state."""
+        hass.data[DOMAIN]["dropdown_open"] = not hass.data[DOMAIN].get("dropdown_open", False)
+        # Push state update to sensor so button-card reads new attribute
+        for sensor in hass.data[DOMAIN].get("sensors", []):
+            try:
+                sensor.async_write_ha_state()
+            except Exception:
+                pass
+
     hass.services.async_register(DOMAIN, SERVICE_REGISTER_SOURCE, handle_register_source)
     hass.services.async_register(DOMAIN, SERVICE_SNOOZE, handle_snooze)
     hass.services.async_register(DOMAIN, SERVICE_UNSNOOZE, handle_unsnooze)
     hass.services.async_register(DOMAIN, SERVICE_ACKNOWLEDGE, handle_acknowledge)
+    hass.services.async_register(DOMAIN, SERVICE_TOGGLE_DROPDOWN, handle_toggle_dropdown)
 
 
 def _async_setup_automations(hass: HomeAssistant) -> None:

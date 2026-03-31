@@ -76,3 +76,8 @@ acknowledge:
       required: true
       selector:
         text:
+
+toggle_dropdown:
+  name: Toggle Notification Dropdown
+  description: Toggle the notification dropdown panel open/close state.
+  fields: {}
