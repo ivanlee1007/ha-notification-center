@@ -197,13 +197,19 @@ binary_sensor:
 
 ### 安裝
 
-整合啟用後自動註冊 JS 檔案，直接在 Lovelace 中使用：
+整合啟用後會自動註冊 JS 檔案，直接在 Lovelace 中使用：
 
 ```yaml
 type: custom:ha-notification-center-card
 show_chip: true
 show_panel: true
 max_items: 20
+```
+
+如果 HA 前端快取或資源註冊異常，可手動在 **設定 → 儀表板 → 資源** 加入：
+
+```text
+/ha_notification_center/ha-notification-center-card.js?v=1.0.2
 ```
 
 或使用內建 YAML 模板（需安裝 [button-card](https://github.com/custom-cards/button-card)）：

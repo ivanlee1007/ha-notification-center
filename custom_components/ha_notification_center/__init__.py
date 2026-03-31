@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
-from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components import frontend
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import (
@@ -48,19 +50,62 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 SCAN_INTERVAL = timedelta(seconds=5)
+CARD_FILE = "ha-notification-center-card.js"
+CARD_STATIC_URL = f"/{DOMAIN}/{CARD_FILE}"
+CARD_VERSION = "1.0.2"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Notification Center component."""
-    hass.data.setdefault(DOMAIN, {})
+    domain_data = hass.data.setdefault(DOMAIN, {})
     storage = NotificationStorage(hass)
     await storage.async_load()
-    hass.data[DOMAIN]["storage"] = storage
-    hass.data[DOMAIN]["sources"] = {}
-    hass.data[DOMAIN]["notify_service"] = "notify"
-    hass.data[DOMAIN]["email_service"] = None
-    hass.data[DOMAIN]["critical_repeat_interval"] = 10
-    hass.data[DOMAIN]["battery_threshold"] = 20
+    domain_data["storage"] = storage
+    domain_data["sources"] = {}
+    domain_data["notify_service"] = "notify"
+    domain_data["email_service"] = None
+    domain_data["critical_repeat_interval"] = 10
+    domain_data["battery_threshold"] = 20
+
+    card_path = Path(__file__).parent / "www" / CARD_FILE
+    if card_path.is_file() and not domain_data.get("card_static_registered"):
+        try:
+            await hass.http.async_register_static_paths(
+                [StaticPathConfig(CARD_STATIC_URL, str(card_path), cache_headers=False)]
+            )
+            domain_data["card_static_registered"] = True
+            _LOGGER.info(
+                "Notification Center card static path registered: %s -> %s",
+                CARD_STATIC_URL,
+                card_path,
+            )
+        except RuntimeError:
+            domain_data["card_static_registered"] = True
+            _LOGGER.debug(
+                "Notification Center card static path already registered: %s",
+                CARD_STATIC_URL,
+            )
+    elif not card_path.is_file():
+        _LOGGER.warning("Notification Center card JS file not found: %s", card_path)
+
+    if card_path.is_file() and not domain_data.get("card_resource_registered"):
+        card_resource_url = f"{CARD_STATIC_URL}?v={CARD_VERSION}"
+        try:
+            frontend.add_extra_js_url(hass, card_resource_url)
+            domain_data["card_resource_registered"] = True
+            domain_data["card_resource_url"] = card_resource_url
+            _LOGGER.info(
+                "Notification Center card frontend resource registered: %s",
+                card_resource_url,
+            )
+        except ValueError:
+            domain_data["card_resource_registered"] = True
+            domain_data["card_resource_url"] = card_resource_url
+            _LOGGER.debug(
+                "Notification Center card frontend resource already registered: %s",
+                card_resource_url,
+            )
+
     return True
 
 
@@ -76,15 +121,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _async_setup_services(hass)
     _async_setup_automations(hass)
-
-    # Register Lovelace resources
-    try:
-        add_extra_js_url(
-            hass,
-            "/ha_notification_center/www/ha-notification-center-card.js",
-        )
-    except Exception:
-        _LOGGER.debug("Could not register frontend JS (may already be registered)")
 
     return True
 

@@ -202,7 +202,7 @@ customElements.define("ha-notification-center-card", HaNotificationCenterCard);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "ha-notification-center-card",
+  type: "custom:ha-notification-center-card",
   name: "UNiNUS Notification Center",
   description: "通知中心晶片 + 浮動面板",
   preview: true,
