@@ -35,7 +35,7 @@ async def async_setup_entry(
 class NotificationAnyActiveSensor(BinarySensorEntity):
     """Binary sensor: any notification is active."""
 
-    _attr_name = "Notification Any Active"
+    _attr_name = "HA Notification Center Any Active"
     _attr_unique_id = "ha_notification_center_any_active"
     _attr_icon = "mdi:bell"
 
@@ -53,7 +53,7 @@ class NotificationAnyActiveSensor(BinarySensorEntity):
 class NotificationAnyCriticalSensor(BinarySensorEntity):
     """Binary sensor: any critical notification is active."""
 
-    _attr_name = "Notification Any Critical"
+    _attr_name = "HA Notification Center Any Critical"
     _attr_unique_id = "ha_notification_center_any_critical"
     _attr_icon = "mdi:alert-circle"
 
@@ -73,7 +73,7 @@ class NotificationAnyCriticalSensor(BinarySensorEntity):
 class NotificationAnyWarningSensor(BinarySensorEntity):
     """Binary sensor: any warning notification is active."""
 
-    _attr_name = "Notification Any Warning"
+    _attr_name = "HA Notification Center Any Warning"
     _attr_unique_id = "ha_notification_center_any_warning"
     _attr_icon = "mdi:alert"
 

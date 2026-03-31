@@ -103,12 +103,12 @@ automation:
 
 | 實體 | 類型 | 說明 |
 |---|---|---|
-| `sensor.notification_feed` | sensor | 通知數量（attributes 含完整通知列表） |
-| `sensor.notification_count_warning` | sensor | Warning 通知數 |
-| `sensor.notification_count_critical` | sensor | Critical 通知數 |
-| `binary_sensor.notification_any_active` | binary_sensor | 有通知活躍時為 `on` |
-| `binary_sensor.notification_any_critical` | binary_sensor | 有 Critical 通知時為 `on` |
-| `binary_sensor.notification_any_warning` | binary_sensor | 有 Warning/Critical 通知時為 `on` |
+| `sensor.ha_notification_center_feed` | sensor | 通知數量（attributes 含完整通知列表） |
+| `sensor.ha_notification_center_count_warning` | sensor | Warning 通知數 |
+| `sensor.ha_notification_center_count_critical` | sensor | Critical 通知數 |
+| `binary_sensor.ha_notification_center_any_active` | binary_sensor | 有通知活躍時為 `on` |
+| `binary_sensor.ha_notification_center_any_critical` | binary_sensor | 有 Critical 通知時為 `on` |
+| `binary_sensor.ha_notification_center_any_warning` | binary_sensor | 有 Warning/Critical 通知時為 `on` |
 
 ### Service Call
 

@@ -51,7 +51,7 @@ class NotificationFeedSensor(SensorEntity):
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize."""
         self._hass = hass
-        self._attr_name = "Notification Feed"
+        self._attr_name = "HA Notification Center Feed"
         self._attr_unique_id = "ha_notification_center_feed"
         self._attr_extra_state_attributes = {}
 
@@ -94,7 +94,7 @@ class NotificationCountSensor(SensorEntity):
         """Initialize."""
         self._hass = hass
         self._priority = priority
-        self._attr_name = f"Notification Count {priority.capitalize()}"
+        self._attr_name = f"HA Notification Center Count {priority.capitalize()}"
         self._attr_unique_id = f"ha_notification_center_count_{priority}"
         self._attr_icon = (
             "mdi:alert-circle" if priority == PRIORITY_CRITICAL else "mdi:alert"

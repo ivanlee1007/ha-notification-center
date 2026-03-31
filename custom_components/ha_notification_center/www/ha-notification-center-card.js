@@ -13,6 +13,8 @@ class HaNotificationCenterCard extends HTMLElement {
       show_chip: true,
       show_panel: true,
       max_items: 50,
+      entity: "sensor.ha_notification_center_feed",
+      critical_entity: "binary_sensor.ha_notification_center_any_critical",
       ...config,
     };
   }
@@ -23,15 +25,15 @@ class HaNotificationCenterCard extends HTMLElement {
   }
 
   getCardSize() {
-    const feed = this._hass?.states?.["sensor.ha_notification_center_feed"];
+    const feed = this._hass?.states?.[this._config.entity];
     return feed?.state > 0 ? 3 : 1;
   }
 
   _render() {
     if (!this._hass) return;
 
-    const feed = this._hass.states["sensor.ha_notification_center_feed"];
-    const anyCritical = this._hass.states["sensor.ha_notification_center_any_critical"];
+    const feed = this._hass.states[this._config.entity];
+    const anyCritical = this._hass.states[this._config.critical_entity];
     const count = feed ? parseInt(feed.state) || 0 : 0;
     const isCritical = anyCritical?.state === "on";
     const notifications = feed?.attributes?.notifications || [];
