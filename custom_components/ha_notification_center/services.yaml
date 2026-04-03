@@ -2,6 +2,12 @@ register_source:
   name: Register Notification Source
   description: Register a notification source with the Notification Center.
   fields:
+    source_id:
+      description: "Stable source ID. If omitted, a slug will be generated from name."
+      required: false
+      example: "water_leak"
+      selector:
+        text:
     name:
       description: "Display name of the notification source."
       required: true
@@ -36,6 +42,71 @@ register_source:
       example: "binary_sensor.water_leak"
       selector:
         entity:
+
+push_notification:
+  name: Push Notification
+  description: Push a notification directly into the Notification Center feed for card display and automation-driven alerts.
+  fields:
+    source_id:
+      description: "Stable source ID for update/replace/clear operations."
+      required: true
+      example: "pump_alarm_main"
+      selector:
+        text:
+    name:
+      description: "Display name of the notification."
+      required: true
+      example: "主泵浦異常"
+      selector:
+        text:
+    icon:
+      description: "MDI icon for the notification."
+      required: false
+      example: "mdi:pump"
+      selector:
+        icon:
+    priority:
+      description: "Priority level: info, warning, or critical."
+      required: false
+      default: "info"
+      selector:
+        select:
+          options:
+            - "info"
+            - "warning"
+            - "critical"
+    description:
+      description: "Description text shown in the card."
+      required: false
+      example: "壓力低於安全值，請立即檢查"
+      selector:
+        text:
+    tap_action_entity:
+      description: "Entity to navigate to when notification is tapped."
+      required: false
+      example: "switch.pump_main"
+      selector:
+        entity:
+    auto_clear_seconds:
+      description: "Optional TTL in seconds. When reached, the notification is auto-cleared."
+      required: false
+      example: 3600
+      selector:
+        number:
+          min: 1
+          max: 604800
+          unit_of_measurement: seconds
+
+clear_notification:
+  name: Clear Notification
+  description: Remove a directly pushed notification from the Notification Center feed.
+  fields:
+    source_id:
+      description: "Stable source ID of the notification to clear."
+      required: true
+      example: "pump_alarm_main"
+      selector:
+        text:
 
 snooze:
   name: Snooze Notification

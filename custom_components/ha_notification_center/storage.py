@@ -22,6 +22,7 @@ class NotificationStorage:
             "snooze_map": {},
             "repeat_map": {},
             "acknowledge_map": {},
+            "manual_notifications": {},
         }
 
     async def async_load(self) -> None:
@@ -74,11 +75,25 @@ class NotificationStorage:
         """Check if a source has been acknowledged."""
         return source_id in self._data.get("acknowledge_map", {})
 
+    async def async_get_acknowledged_at(self, source_id: str) -> str | None:
+        """Return acknowledge timestamp for a source if present."""
+        return self._data.get("acknowledge_map", {}).get(source_id)
+
+    async def async_clear_acknowledge(self, source_id: str) -> None:
+        """Clear acknowledge state for a source."""
+        self._data.get("acknowledge_map", {}).pop(source_id, None)
+        await self.async_save()
+
     # --- Repeat ---
 
     async def async_set_last_repeat(self, source_id: str) -> None:
         """Record last repeat time."""
         self._data["repeat_map"][source_id] = datetime.now().isoformat()
+        await self.async_save()
+
+    async def async_clear_last_repeat(self, source_id: str) -> None:
+        """Clear repeat state for a source."""
+        self._data.get("repeat_map", {}).pop(source_id, None)
         await self.async_save()
 
     async def should_repeat(self, source_id: str, interval_minutes: int) -> bool:
@@ -106,3 +121,38 @@ class NotificationStorage:
             del self._data["snooze_map"][sid]
         if expired:
             await self.async_save()
+
+    # --- Manual notifications ---
+
+    async def async_set_manual_notification(self, source_id: str, payload: dict[str, Any]) -> None:
+        """Persist a manual/pushed notification payload."""
+        self._data.setdefault("manual_notifications", {})[source_id] = payload
+        await self.async_save()
+
+    async def async_remove_manual_notification(self, source_id: str) -> None:
+        """Remove a persisted manual notification."""
+        self._data.setdefault("manual_notifications", {}).pop(source_id, None)
+        await self.async_save()
+
+    async def async_get_manual_notifications(self) -> dict[str, dict[str, Any]]:
+        """Return non-expired persisted manual notifications."""
+        now = datetime.now()
+        changed = False
+        result: dict[str, dict[str, Any]] = {}
+        for source_id, payload in list(self._data.get("manual_notifications", {}).items()):
+            expires_at = payload.get("expires_at")
+            if expires_at:
+                try:
+                    expires_dt = datetime.fromisoformat(expires_at)
+                    if expires_dt <= now:
+                        del self._data["manual_notifications"][source_id]
+                        changed = True
+                        continue
+                except (ValueError, TypeError):
+                    del self._data["manual_notifications"][source_id]
+                    changed = True
+                    continue
+            result[source_id] = payload
+        if changed:
+            await self.async_save()
+        return result

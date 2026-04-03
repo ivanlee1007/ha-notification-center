@@ -19,6 +19,7 @@ Home Assistant 通知中心 — 一站式通知管理整合，支援分級、自
 | ⏰ **Snooze** | 暫停通知 1h / 4h / 8h / 24h，使用 HA Storage 儲存（無字元限制） |
 | 🔁 **Critical 重複** | 緊急通知每隔 N 分鐘自動重送，直到 Acknowledge |
 | ✅ **自動解除** | 通知源狀態恢復正常 → 自動清除 |
+| 📨 **Direct Push API** | HA automation 可直接用 service 把通知送進卡片 feed |
 | 🎨 **Lovelace 卡片** | 搭配獨立 HACS Dashboard repo `ha-notification-center-card` 使用 |
 
 ---
@@ -136,6 +137,8 @@ automation:
 | Service | 參數 | 說明 |
 |---|---|---|
 | `ha_notification_center.register_source` | `name`, `icon`, `priority`, `description`, `tap_action_entity` | 註冊通知源 |
+| `ha_notification_center.push_notification` | `source_id`, `name`, `priority`, `description`, `icon`, `tap_action_entity`, `auto_clear_seconds` | 直接把通知推進 feed |
+| `ha_notification_center.clear_notification` | `source_id` | 清除直接推進 feed 的通知 |
 | `ha_notification_center.snooze` | `source_id`, `duration_hours` | 暫停通知 |
 | `ha_notification_center.unsnooze` | `source_id` | 取消暫停 |
 | `ha_notification_center.acknowledge` | `source_id` | 確認通知（停止重複推送） |
@@ -211,6 +214,51 @@ binary_sensor:
           description: "感測器偵測到降雨"
           tap_action_entity: "weather.home"
 ```
+
+### 範例 5：Automation 直接送通知到卡片（推薦給動態告警）
+
+如果你的告警不是天然對應某顆 `binary_sensor.notification_*`，而是想由 automation / script / AI 流程直接送進卡片，請改用 `push_notification`：
+
+```yaml
+automation:
+  - alias: "主泵浦異常時送到 Notification Center"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.pump_pressure
+        below: 1.2
+    action:
+      - service: ha_notification_center.push_notification
+        data:
+          source_id: pump_alarm_main
+          name: 主泵浦異常
+          priority: critical
+          icon: mdi:pump
+          description: 壓力低於安全值，請立即檢查
+          tap_action_entity: switch.pump_main
+          auto_clear_seconds: 3600
+```
+
+解除時：
+
+```yaml
+automation:
+  - alias: "主泵浦恢復時清除 Notification Center 告警"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.pump_pressure
+        above: 1.2
+    action:
+      - service: ha_notification_center.clear_notification
+        data:
+          source_id: pump_alarm_main
+```
+
+### 什麼時候用 binary_sensor，什麼時候用 push_notification？
+
+- **固定設備狀態型告警**：用 `binary_sensor.notification_*`
+- **動態文字 / workflow / AI 判讀 / 臨時事件**：用 `push_notification`
+
+兩條路都會進到同一個 `sensor.notification_feed`，卡片不需要分開處理。
 
 ---
 
