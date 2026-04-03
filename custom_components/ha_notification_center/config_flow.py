@@ -56,15 +56,17 @@ class NotificationCenterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return NotificationCenterOptionsFlow(config_entry)
+        return NotificationCenterOptionsFlow()
 
 
 class NotificationCenterOptionsFlow(config_entries.OptionsFlow):
     """Handle options."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
+    def _current_value(self, key: str, default=None):
+        """Return effective current value from options, then data, then default."""
+        if key in self.config_entry.options:
+            return self.config_entry.options.get(key)
+        return self.config_entry.data.get(key, default)
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -77,25 +79,19 @@ class NotificationCenterOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_NOTIFY_SERVICE,
-                        default=self.config_entry.data.get(
-                            CONF_NOTIFY_SERVICE, "notify"
-                        ),
+                        default=self._current_value(CONF_NOTIFY_SERVICE, "notify"),
                     ): str,
                     vol.Optional(
                         CONF_EMAIL_SERVICE,
-                        default=self.config_entry.data.get(CONF_EMAIL_SERVICE, ""),
+                        default=self._current_value(CONF_EMAIL_SERVICE, ""),
                     ): str,
                     vol.Optional(
                         CONF_CRITICAL_REPEAT_INTERVAL,
-                        default=self.config_entry.data.get(
-                            CONF_CRITICAL_REPEAT_INTERVAL, 10
-                        ),
+                        default=self._current_value(CONF_CRITICAL_REPEAT_INTERVAL, 10),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=120)),
                     vol.Optional(
                         CONF_BATTERY_THRESHOLD,
-                        default=self.config_entry.data.get(
-                            CONF_BATTERY_THRESHOLD, 20
-                        ),
+                        default=self._current_value(CONF_BATTERY_THRESHOLD, 20),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
                 }
             ),

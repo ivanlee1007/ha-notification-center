@@ -168,12 +168,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Notification Center from a config entry."""
-    hass.data[DOMAIN]["notify_service"] = entry.data.get("notify_service", "notify")
-    hass.data[DOMAIN]["email_service"] = entry.data.get("email_service")
-    hass.data[DOMAIN]["critical_repeat_interval"] = entry.data.get(
-        "critical_repeat_interval", 10
+    options = entry.options
+    hass.data[DOMAIN]["notify_service"] = options.get(
+        "notify_service", entry.data.get("notify_service", "notify")
     )
-    hass.data[DOMAIN]["battery_threshold"] = entry.data.get("battery_threshold", 20)
+    hass.data[DOMAIN]["email_service"] = options.get(
+        "email_service", entry.data.get("email_service")
+    )
+    hass.data[DOMAIN]["critical_repeat_interval"] = options.get(
+        "critical_repeat_interval", entry.data.get("critical_repeat_interval", 10)
+    )
+    hass.data[DOMAIN]["battery_threshold"] = options.get(
+        "battery_threshold", entry.data.get("battery_threshold", 20)
+    )
+
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _async_setup_services(hass)
@@ -185,6 +194,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload entry when options are updated."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def _async_setup_services(hass: HomeAssistant) -> None:
