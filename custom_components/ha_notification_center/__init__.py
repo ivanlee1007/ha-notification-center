@@ -27,6 +27,7 @@ from .const import (
     ATTR_NAME,
     ATTR_PRIORITY,
     ATTR_SOURCE_ID,
+    ATTR_TAP_ACTION,
     ATTR_TAP_ACTION_ENTITY,
     ATTR_TIMESTAMP,
     DOMAIN,
@@ -56,7 +57,10 @@ def _build_notification_payload(
     icon: str = "mdi:bell",
     priority: str = PRIORITY_INFO,
     description: str = "",
+    tap_action: str = "more-info",
     tap_action_entity: str | None = None,
+    tap_action_navigation_path: str = "",
+    tap_action_url_path: str = "",
     timestamp: str | None = None,
     acknowledged: bool = False,
     acknowledged_at: str | None = None,
@@ -69,7 +73,10 @@ def _build_notification_payload(
         ATTR_ICON: icon or "mdi:bell",
         ATTR_PRIORITY: priority if priority in (PRIORITY_INFO, PRIORITY_WARNING, PRIORITY_CRITICAL) else PRIORITY_INFO,
         ATTR_DESCRIPTION: description or "",
+        ATTR_TAP_ACTION: tap_action,
         ATTR_TAP_ACTION_ENTITY: tap_action_entity,
+        "tap_action_navigation_path": tap_action_navigation_path,
+        "tap_action_url_path": tap_action_url_path,
         ATTR_TIMESTAMP: timestamp or datetime.now().isoformat(),
         ATTR_ACKNOWLEDGED: bool(acknowledged),
         ATTR_ACKNOWLEDGED_AT: acknowledged_at,
@@ -260,7 +267,10 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             icon=str(data.get(ATTR_ICON) or "mdi:bell"),
             priority=str(data.get(ATTR_PRIORITY) or PRIORITY_INFO),
             description=str(data.get(ATTR_DESCRIPTION) or ""),
+            tap_action=str(data.get(ATTR_TAP_ACTION) or "more-info"),
             tap_action_entity=data.get(ATTR_TAP_ACTION_ENTITY),
+            tap_action_navigation_path=str(data.get("tap_action_navigation_path") or ""),
+            tap_action_url_path=str(data.get("tap_action_url_path") or ""),
             timestamp=datetime.now().isoformat(),
             acknowledged=bool(data.get(ATTR_ACKNOWLEDGED, False)),
             acknowledged_at=data.get(ATTR_ACKNOWLEDGED_AT),
@@ -375,7 +385,10 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
             name = str(new_state.attributes.get("friendly_name", source_id))
             icon = str(new_state.attributes.get("icon", "mdi:bell"))
             description = str(new_state.attributes.get("description", ""))
+            tap_act = str(new_state.attributes.get("tap_action", "more-info"))
             tap_entity = new_state.attributes.get("tap_action_entity", entity_id)
+            tap_nav_path = str(new_state.attributes.get("tap_action_navigation_path", ""))
+            tap_url_path = str(new_state.attributes.get("tap_action_url_path", ""))
             acknowledged = await storage.is_acknowledged(source_id)
             acknowledged_at = await storage.async_get_acknowledged_at(source_id)
 
@@ -385,7 +398,10 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
                 icon=icon,
                 priority=priority,
                 description=description,
+                tap_action=tap_act,
                 tap_action_entity=tap_entity,
+                tap_action_navigation_path=tap_nav_path,
+                tap_action_url_path=tap_url_path,
                 timestamp=new_state.last_changed.isoformat(),
                 acknowledged=acknowledged,
                 acknowledged_at=acknowledged_at,
