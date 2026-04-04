@@ -82,7 +82,7 @@ push_notification:
       selector:
         text:
     tap_action:
-      description: "Action when notification is tapped: more-info (default), navigate, or url."
+      description: "Action when notification is tapped: more-info (default), navigate, url, or call_service."
       required: false
       default: "more-info"
       selector:
@@ -91,6 +91,7 @@ push_notification:
             - "more-info"
             - "navigate"
             - "url"
+            - "call_service"
     tap_action_entity:
       description: "Entity to show in more-info panel when notification is tapped."
       required: false
@@ -109,6 +110,24 @@ push_notification:
       example: "https://example.com"
       selector:
         text:
+    tap_action_service_domain:
+      description: "HA service domain (e.g. switch, script) when tap_action is 'call_service'."
+      required: false
+      example: "switch"
+      selector:
+        text:
+    tap_action_service:
+      description: "HA service name (e.g. turn_off, turn_on) when tap_action is 'call_service'."
+      required: false
+      example: "turn_off"
+      selector:
+        text:
+    tap_action_service_data:
+      description: "Service data JSON object passed to the service call when tap_action is 'call_service'."
+      required: false
+      example: '{"entity_id": "switch.pump_main"}'
+      selector:
+        object:
     auto_clear_seconds:
       description: "Optional TTL in seconds. When reached, the notification is auto-cleared."
       required: false
