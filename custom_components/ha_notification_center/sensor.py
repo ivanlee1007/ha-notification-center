@@ -79,6 +79,7 @@ class NotificationFeedSensor(SensorEntity):
                     "tap_action_entity": notif.get(ATTR_TAP_ACTION_ENTITY),
                     "timestamp": notif.get(ATTR_TIMESTAMP, ""),
                     "acknowledged": notif.get("acknowledged", False),
+                    "type": notif.get("type", "entity"),
                 }
             )
         return {

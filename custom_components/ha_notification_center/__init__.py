@@ -97,7 +97,12 @@ async def _rebuild_active_notifications(hass: HomeAssistant) -> None:
     domain_data = hass.data[DOMAIN]
     entity_notifications = domain_data.get("entity_notifications", {})
     manual_notifications = domain_data.get("manual_notifications", {})
-    domain_data["active_notifications"] = {**entity_notifications, **manual_notifications}
+
+    # Add type flag to distinguish sources
+    entities = {nid: {**n, "type": "entity"} for nid, n in entity_notifications.items()}
+    manuals = {nid: {**n, "type": "manual"} for nid, n in manual_notifications.items()}
+
+    domain_data["active_notifications"] = {**entities, **manuals}
     _push_entity_updates(hass)
 
 
