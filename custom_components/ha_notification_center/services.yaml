@@ -81,12 +81,34 @@ push_notification:
       example: "壓力低於安全值，請立即檢查"
       selector:
         text:
+    tap_action:
+      description: "Action when notification is tapped: more-info (default), navigate, or url."
+      required: false
+      default: "more-info"
+      selector:
+        select:
+          options:
+            - "more-info"
+            - "navigate"
+            - "url"
     tap_action_entity:
-      description: "Entity to navigate to when notification is tapped."
+      description: "Entity to show in more-info panel when notification is tapped."
       required: false
       example: "switch.pump_main"
       selector:
         entity:
+    tap_action_navigation_path:
+      description: "Path to navigate to when tap_action is 'navigate'."
+      required: false
+      example: "/lovelace/0"
+      selector:
+        text:
+    tap_action_url_path:
+      description: "URL to open in new tab when tap_action is 'url'."
+      required: false
+      example: "https://example.com"
+      selector:
+        text:
     auto_clear_seconds:
       description: "Optional TTL in seconds. When reached, the notification is auto-cleared."
       required: false
