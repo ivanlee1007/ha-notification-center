@@ -16,6 +16,7 @@ from homeassistant.core import (
     State,
 )
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.script import Script, async_validate_actions_config
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -28,6 +29,7 @@ from .const import (
     ATTR_PRIORITY,
     ATTR_SOURCE_ID,
     ATTR_TAP_ACTION,
+    ATTR_TAP_ACTION_ACTION,
     ATTR_TAP_ACTION_ENTITY,
     ATTR_TAP_ACTION_SERVICE,
     ATTR_TAP_ACTION_SERVICE_DATA,
@@ -39,6 +41,7 @@ from .const import (
     PRIORITY_WARNING,
     SERVICE_ACKNOWLEDGE,
     SERVICE_CLEAR_NOTIFICATION,
+    SERVICE_EXECUTE_TAP_ACTION,
     SERVICE_PUSH_NOTIFICATION,
     SERVICE_REGISTER_SOURCE,
     SERVICE_SNOOZE,
@@ -62,6 +65,7 @@ def _build_notification_payload(
     description: str = "",
     tap_action: str = "more-info",
     tap_action_entity: str | None = None,
+    tap_action_action: list[dict[str, Any]] | None = None,
     tap_action_navigation_path: str = "",
     tap_action_url_path: str = "",
     tap_action_service_domain: str = "",
@@ -81,6 +85,7 @@ def _build_notification_payload(
         ATTR_DESCRIPTION: description or "",
         ATTR_TAP_ACTION: tap_action,
         ATTR_TAP_ACTION_ENTITY: tap_action_entity,
+        ATTR_TAP_ACTION_ACTION: tap_action_action or [],
         "tap_action_navigation_path": tap_action_navigation_path,
         "tap_action_url_path": tap_action_url_path,
         ATTR_TAP_ACTION_SERVICE_DOMAIN: tap_action_service_domain,
@@ -270,6 +275,20 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             except (TypeError, ValueError):
                 _LOGGER.warning("Invalid auto_clear_seconds for %s: %r", source_id, auto_clear_seconds)
 
+        tap_action_action = data.get(ATTR_TAP_ACTION_ACTION)
+        validated_tap_action_action: list[dict[str, Any]] = []
+        if tap_action_action:
+            if isinstance(tap_action_action, dict):
+                tap_action_action = [tap_action_action]
+            if not isinstance(tap_action_action, list):
+                _LOGGER.error("tap_action_action for %s must be a list of HA actions", source_id)
+                return
+            try:
+                validated_tap_action_action = await async_validate_actions_config(hass, tap_action_action)
+            except Exception:
+                _LOGGER.exception("Invalid tap_action_action for %s", source_id)
+                return
+
         payload = _build_notification_payload(
             source_id,
             name,
@@ -278,6 +297,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             description=str(data.get(ATTR_DESCRIPTION) or ""),
             tap_action=str(data.get(ATTR_TAP_ACTION) or "more-info"),
             tap_action_entity=data.get(ATTR_TAP_ACTION_ENTITY),
+            tap_action_action=validated_tap_action_action,
             tap_action_navigation_path=str(data.get("tap_action_navigation_path") or ""),
             tap_action_url_path=str(data.get("tap_action_url_path") or ""),
             tap_action_service_domain=str(data.get(ATTR_TAP_ACTION_SERVICE_DOMAIN) or ""),
@@ -291,6 +311,51 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         hass.data[DOMAIN]["manual_notifications"][source_id] = payload
         await storage.async_set_manual_notification(source_id, payload)
         await _rebuild_active_notifications(hass)
+
+    async def handle_execute_tap_action(call: ServiceCall) -> None:
+        """Execute stored tap action for a notification."""
+        source_id = str(call.data.get(ATTR_SOURCE_ID) or "").strip()
+        if not source_id:
+            _LOGGER.error("execute_tap_action requires 'source_id'")
+            return
+
+        notification = hass.data[DOMAIN].get("active_notifications", {}).get(source_id)
+        if not notification:
+            _LOGGER.warning("No active notification found for tap action: %s", source_id)
+            return
+
+        action_config = notification.get(ATTR_TAP_ACTION_ACTION) or []
+        if action_config:
+            try:
+                script = Script(
+                    hass,
+                    action_config,
+                    f"notification_tap_action_{source_id}",
+                    DOMAIN,
+                    script_mode="parallel",
+                )
+                await script.async_run(context=call.context)
+            except Exception:
+                _LOGGER.exception("Failed to execute stored tap_action_action for %s", source_id)
+            return
+
+        svc_domain = str(notification.get(ATTR_TAP_ACTION_SERVICE_DOMAIN) or "")
+        svc = str(notification.get(ATTR_TAP_ACTION_SERVICE) or "")
+        svc_data = notification.get(ATTR_TAP_ACTION_SERVICE_DATA) or {}
+        if svc_domain and svc:
+            try:
+                await hass.services.async_call(
+                    svc_domain,
+                    svc,
+                    svc_data,
+                    blocking=False,
+                    context=call.context,
+                )
+            except Exception:
+                _LOGGER.exception("Failed to execute legacy tap_action service for %s", source_id)
+            return
+
+        _LOGGER.warning("Notification %s has no executable tap action", source_id)
 
     async def handle_clear_notification(call: ServiceCall) -> None:
         """Clear a manual notification from the feed."""
@@ -353,6 +418,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_REGISTER_SOURCE, handle_register_source)
     hass.services.async_register(DOMAIN, SERVICE_PUSH_NOTIFICATION, handle_push_notification)
     hass.services.async_register(DOMAIN, SERVICE_CLEAR_NOTIFICATION, handle_clear_notification)
+    hass.services.async_register(DOMAIN, SERVICE_EXECUTE_TAP_ACTION, handle_execute_tap_action)
     hass.services.async_register(DOMAIN, SERVICE_SNOOZE, handle_snooze)
     hass.services.async_register(DOMAIN, SERVICE_UNSNOOZE, handle_unsnooze)
     hass.services.async_register(DOMAIN, SERVICE_ACKNOWLEDGE, handle_acknowledge)
@@ -412,6 +478,7 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
                 description=description,
                 tap_action=tap_act,
                 tap_action_entity=tap_entity,
+                tap_action_action=new_state.attributes.get("tap_action_action") or [],
                 tap_action_navigation_path=tap_nav_path,
                 tap_action_url_path=tap_url_path,
                 tap_action_service_domain=str(new_state.attributes.get("tap_action_service_domain", "") or ""),

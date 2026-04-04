@@ -98,6 +98,11 @@ push_notification:
       example: "switch.pump_main"
       selector:
         entity:
+    tap_action_action:
+      description: "Preferred for call_service: use Home Assistant's standard action editor to define what should run when the notification is tapped."
+      required: false
+      selector:
+        action:
     tap_action_navigation_path:
       description: "Path to navigate to when tap_action is 'navigate'."
       required: false
@@ -111,19 +116,19 @@ push_notification:
       selector:
         text:
     tap_action_service_domain:
-      description: "HA service domain (e.g. switch, script) when tap_action is 'call_service'."
+      description: "Legacy/advanced fallback: HA service domain (e.g. switch, script) when tap_action is 'call_service'. Prefer tap_action_action above."
       required: false
       example: "switch"
       selector:
         text:
     tap_action_service:
-      description: "HA service name (e.g. turn_off, turn_on) when tap_action is 'call_service'."
+      description: "Legacy/advanced fallback: HA service name (e.g. turn_off, turn_on) when tap_action is 'call_service'. Prefer tap_action_action above."
       required: false
       example: "turn_off"
       selector:
         text:
     tap_action_service_data:
-      description: "Service data JSON object passed to the service call when tap_action is 'call_service'."
+      description: "Legacy/advanced fallback: service data JSON object. Prefer tap_action_action above."
       required: false
       example: '{"entity_id": "switch.pump_main"}'
       selector:
@@ -144,6 +149,17 @@ clear_notification:
   fields:
     source_id:
       description: "Stable source ID of the notification to clear."
+      required: true
+      example: "pump_alarm_main"
+      selector:
+        text:
+
+execute_tap_action:
+  name: Execute Notification Tap Action
+  description: Execute the stored tap action for an active notification. Used by the card when a notification is clicked.
+  fields:
+    source_id:
+      description: "Stable source ID of the notification to execute."
       required: true
       example: "pump_alarm_main"
       selector:
