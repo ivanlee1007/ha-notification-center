@@ -34,6 +34,9 @@ from .const import (
     ATTR_TAP_ACTION_SERVICE,
     ATTR_TAP_ACTION_SERVICE_DATA,
     ATTR_TIMESTAMP,
+    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
     DOMAIN,
     PRIORITY_CRITICAL,
     PRIORITY_WARNING,
@@ -110,6 +113,11 @@ class NotificationFeedSensor(SensorEntity):
             "notifications": notifications,
             "count": len(notifications),
             "dropdown_open": self._hass.data.get(DOMAIN, {}).get("dropdown_open", False),
+            "auto_clear_defaults": {
+                "info": self._hass.data.get(DOMAIN, {}).get(CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, 3600),
+                "warning": self._hass.data.get(DOMAIN, {}).get(CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, 0),
+                "critical": self._hass.data.get(DOMAIN, {}).get(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, 0),
+            },
         }
 
 

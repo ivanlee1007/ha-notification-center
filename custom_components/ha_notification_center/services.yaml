@@ -167,6 +167,43 @@ clear_notification:
       selector:
         text:
 
+clear_all_notifications:
+  name: Clear All Notifications
+  description: Remove all currently active notifications from the Notification Center feed. Entity-backed notifications are dismissed until their source turns off.
+  fields: {}
+
+set_auto_clear_defaults:
+  name: Set Auto-Clear Defaults
+  description: Set priority-based default auto-clear times in seconds. Use 0 to disable auto-clear for that priority.
+  fields:
+    info_seconds:
+      description: "Default auto-clear time for info notifications in seconds. 0 disables auto-clear."
+      required: true
+      example: 3600
+      selector:
+        number:
+          min: 0
+          max: 604800
+          unit_of_measurement: seconds
+    warning_seconds:
+      description: "Default auto-clear time for warning notifications in seconds. 0 disables auto-clear."
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 604800
+          unit_of_measurement: seconds
+    critical_seconds:
+      description: "Default auto-clear time for critical notifications in seconds. 0 disables auto-clear."
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 604800
+          unit_of_measurement: seconds
+
 execute_tap_action:
   name: Execute Notification Tap Action
   description: Execute the stored tap action for an active notification. Used by the card when a notification is clicked.

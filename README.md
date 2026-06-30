@@ -19,7 +19,7 @@ Home Assistant 通知中心 — 一站式通知管理整合，支援分級、自
 | ⏰ **Snooze** | 暫停通知 1h / 4h / 8h / 24h，使用 HA Storage 儲存（無字元限制） |
 | 🔁 **Critical 重複** | 緊急通知每隔 N 分鐘自動重送，直到 Acknowledge |
 | ✅ **自動解除** | 通知源狀態恢復正常 → 自動清除 |
-| 📨 **Direct Push API** | HA automation 可直接用 service 把通知送進卡片 feed |
+| 📨 **Direct Push API** | HA automation 可直接用 service 把通知送進卡片 feed，並可依 info/warning/critical 設定預設自動消失時間 |
 | 🎨 **Lovelace 卡片** | 搭配獨立 HACS Dashboard repo `ha-notification-center-card` 使用 |
 
 ---
@@ -72,6 +72,7 @@ mkdir -p custom_components/ha_notification_center
    - **Email 通知服務**（選填）：例如 `notify.gmail_smtp`
    - **緊急重複間隔**：Critical 通知重送間隔分鐘數（預設 10）
    - **低電量閾值**：低電量警示 %（預設 20）
+   - **資訊 / 警告 / 緊急告警自動消失時間**：Direct Push 告警的預設 TTL 秒數，`0` 表示不自動消失；單筆 service call 的 `auto_clear_seconds` 會優先覆蓋此預設值。
 
 ---
 
@@ -111,6 +112,8 @@ mkdir -p custom_components/ha_notification_center
 | `ha_notification_center.register_source` | `name`, `icon`, `priority`, `description`, `tap_action_entity` | 註冊通知源 |
 | `ha_notification_center.push_notification` | `source_id`, `name`, `priority`, `description`, `icon`, `tap_action_entity`, `auto_clear_seconds` | 直接把通知推進 feed |
 | `ha_notification_center.clear_notification` | `source_id` | 清除直接推進 feed 的通知 |
+| `ha_notification_center.clear_all_notifications` | 無 | 清除目前所有通知；binary_sensor 型通知會 dismiss 到來源變 off 為止 |
+| `ha_notification_center.set_auto_clear_defaults` | `info_seconds`, `warning_seconds`, `critical_seconds` | 更新三種等級的預設自動消失秒數，`0` 表示不自動消失 |
 | `ha_notification_center.snooze` | `source_id`, `duration_hours` | 暫停通知 |
 | `ha_notification_center.unsnooze` | `source_id` | 取消暫停 |
 | `ha_notification_center.acknowledge` | `source_id` | 確認通知（停止重複推送） |
@@ -177,6 +180,14 @@ automation:
           tap_action_entity: switch.pump_main
           auto_clear_seconds: 3600
 ```
+
+若省略 `auto_clear_seconds`，integration 會依通知等級使用 GUI / card 設定的預設自動消失時間：
+
+- `info`：預設 3600 秒
+- `warning`：預設 0，不自動消失
+- `critical`：預設 0，不自動消失
+
+可在整合選項或卡片上的「自動消失設定」調整。
 
 解除時：
 

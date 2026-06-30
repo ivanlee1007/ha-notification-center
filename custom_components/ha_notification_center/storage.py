@@ -36,6 +36,7 @@ class NotificationStorage:
             "repeat_map": {},
             "acknowledge_map": {},
             "manual_notifications": {},
+            "dismissed_map": {},
         }
 
     async def async_load(self) -> None:
@@ -135,6 +136,33 @@ class NotificationStorage:
         if expired:
             await self.async_save()
 
+    # --- Dismissed entity notifications ---
+
+    async def async_dismiss_entity_notification(self, source_id: str) -> None:
+        """Dismiss an entity-backed notification until the source turns off."""
+        self._data.setdefault("dismissed_map", {})[source_id] = datetime.now().isoformat()
+        await self.async_save()
+
+    async def async_dismiss_entity_notifications(self, source_ids: list[str]) -> None:
+        """Dismiss multiple entity-backed notifications until their sources turn off."""
+        if not source_ids:
+            return
+        now = datetime.now().isoformat()
+        dismissed = self._data.setdefault("dismissed_map", {})
+        for source_id in source_ids:
+            dismissed[source_id] = now
+        await self.async_save()
+
+    async def async_is_dismissed(self, source_id: str) -> bool:
+        """Return True if an entity-backed notification is dismissed."""
+        return source_id in self._data.get("dismissed_map", {})
+
+    async def async_clear_dismissed(self, source_id: str) -> None:
+        """Allow a dismissed entity-backed notification to appear again."""
+        if source_id in self._data.get("dismissed_map", {}):
+            self._data["dismissed_map"].pop(source_id, None)
+            await self.async_save()
+
     # --- Manual notifications ---
 
     async def async_set_manual_notification(self, source_id: str, payload: dict[str, Any]) -> None:
@@ -145,6 +173,11 @@ class NotificationStorage:
     async def async_remove_manual_notification(self, source_id: str) -> None:
         """Remove a persisted manual notification."""
         self._data.setdefault("manual_notifications", {}).pop(source_id, None)
+        await self.async_save()
+
+    async def async_clear_all_manual_notifications(self) -> None:
+        """Remove all persisted manual notifications."""
+        self._data["manual_notifications"] = {}
         await self.async_save()
 
     async def async_get_manual_notifications(self) -> dict[str, dict[str, Any]]:

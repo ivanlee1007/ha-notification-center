@@ -48,15 +48,20 @@ from .const import (
     ATTR_TAP_ACTION_SERVICE_DATA,
     ATTR_TAP_ACTION_SERVICE_DOMAIN,
     ATTR_TIMESTAMP,
+    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
     DOMAIN,
     PRIORITY_CRITICAL,
     PRIORITY_INFO,
     PRIORITY_WARNING,
     SERVICE_ACKNOWLEDGE,
+    SERVICE_CLEAR_ALL_NOTIFICATIONS,
     SERVICE_CLEAR_NOTIFICATION,
     SERVICE_EXECUTE_TAP_ACTION,
     SERVICE_PUSH_NOTIFICATION,
     SERVICE_REGISTER_SOURCE,
+    SERVICE_SET_AUTO_CLEAR_DEFAULTS,
     SERVICE_SNOOZE,
     SERVICE_TOGGLE_DROPDOWN,
     SERVICE_UNSNOOZE,
@@ -67,6 +72,26 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 SCAN_INTERVAL = timedelta(seconds=5)
+AUTO_CLEAR_MAX_SECONDS = 604800
+
+
+def _coerce_auto_clear_seconds(value: Any, *, default: int = 0) -> int:
+    """Return a bounded auto-clear duration in seconds."""
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return default
+    return min(max(seconds, 0), AUTO_CLEAR_MAX_SECONDS)
+
+
+def _auto_clear_defaults(hass: HomeAssistant) -> dict[str, int]:
+    """Return the current priority-based default auto-clear durations."""
+    data = hass.data.get(DOMAIN, {})
+    return {
+        PRIORITY_INFO: _coerce_auto_clear_seconds(data.get(CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, 3600)),
+        PRIORITY_WARNING: _coerce_auto_clear_seconds(data.get(CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, 0)),
+        PRIORITY_CRITICAL: _coerce_auto_clear_seconds(data.get(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, 0)),
+    }
 
 
 def _build_notification_payload(
@@ -200,6 +225,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     domain_data["email_service"] = None
     domain_data["critical_repeat_interval"] = 10
     domain_data["battery_threshold"] = 20
+    domain_data[CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS] = 3600
+    domain_data[CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS] = 0
+    domain_data[CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS] = 0
     domain_data["dropdown_open"] = False
     await _rebuild_active_notifications(hass)
     return True
@@ -208,6 +236,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Notification Center from a config entry."""
     options = entry.options
+    hass.data[DOMAIN]["config_entry"] = entry
     hass.data[DOMAIN]["notify_service"] = options.get(
         "notify_service", entry.data.get("notify_service", "notify")
     )
@@ -219,6 +248,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     hass.data[DOMAIN]["battery_threshold"] = options.get(
         "battery_threshold", entry.data.get("battery_threshold", 20)
+    )
+    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS] = _coerce_auto_clear_seconds(
+        options.get(
+            CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
+            entry.data.get(CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, 3600),
+        ),
+        default=3600,
+    )
+    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS] = _coerce_auto_clear_seconds(
+        options.get(
+            CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
+            entry.data.get(CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, 0),
+        )
+    )
+    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS] = _coerce_auto_clear_seconds(
+        options.get(
+            CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
+            entry.data.get(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, 0),
+        )
     )
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -279,14 +327,17 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.debug("Ignoring pushed notification %s because it is snoozed", source_id)
             return
 
+        priority = str(data.get(ATTR_PRIORITY) or PRIORITY_INFO)
+        if priority not in (PRIORITY_INFO, PRIORITY_WARNING, PRIORITY_CRITICAL):
+            priority = PRIORITY_INFO
         auto_clear_seconds = data.get("auto_clear_seconds")
+        if auto_clear_seconds in (None, ""):
+            auto_clear_seconds = _auto_clear_defaults(hass).get(priority, 0)
+
         expires_at = None
-        if auto_clear_seconds not in (None, ""):
-            try:
-                auto_clear_seconds = max(1, int(auto_clear_seconds))
-                expires_at = (datetime.now() + timedelta(seconds=auto_clear_seconds)).isoformat()
-            except (TypeError, ValueError):
-                _LOGGER.warning("Invalid auto_clear_seconds for %s: %r", source_id, auto_clear_seconds)
+        auto_clear_seconds = _coerce_auto_clear_seconds(auto_clear_seconds)
+        if auto_clear_seconds > 0:
+            expires_at = (datetime.now() + timedelta(seconds=auto_clear_seconds)).isoformat()
 
         tap_action_action = data.get(ATTR_TAP_ACTION_ACTION)
         validated_tap_action_action: list[dict[str, Any]] = []
@@ -306,7 +357,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             source_id,
             name,
             icon=str(data.get(ATTR_ICON) or "mdi:bell"),
-            priority=str(data.get(ATTR_PRIORITY) or PRIORITY_INFO),
+            priority=priority,
             description=str(data.get(ATTR_DESCRIPTION) or ""),
             tap_action=str(data.get(ATTR_TAP_ACTION) or "more-info"),
             tap_action_entity=data.get(ATTR_TAP_ACTION_ENTITY),
@@ -370,6 +421,31 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
 
         _LOGGER.warning("Notification %s has no executable tap action", source_id)
 
+    async def handle_set_auto_clear_defaults(call: ServiceCall) -> None:
+        """Update priority-based default auto-clear durations."""
+        info_seconds = _coerce_auto_clear_seconds(call.data.get("info_seconds"), default=3600)
+        warning_seconds = _coerce_auto_clear_seconds(call.data.get("warning_seconds"))
+        critical_seconds = _coerce_auto_clear_seconds(call.data.get("critical_seconds"))
+
+        domain_data = hass.data[DOMAIN]
+        domain_data[CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS] = info_seconds
+        domain_data[CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS] = warning_seconds
+        domain_data[CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS] = critical_seconds
+
+        entry: ConfigEntry | None = domain_data.get("config_entry")
+        if entry:
+            new_options = dict(entry.options)
+            new_options.update(
+                {
+                    CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS: info_seconds,
+                    CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS: warning_seconds,
+                    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS: critical_seconds,
+                }
+            )
+            hass.config_entries.async_update_entry(entry, options=new_options)
+
+        _push_entity_updates(hass)
+
     async def handle_clear_notification(call: ServiceCall) -> None:
         """Clear a manual notification from the feed."""
         source_id = str(call.data.get(ATTR_SOURCE_ID) or "").strip()
@@ -381,6 +457,20 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         await storage.async_remove_manual_notification(source_id)
         await storage.async_clear_acknowledge(source_id)
         await storage.async_clear_last_repeat(source_id)
+        await _rebuild_active_notifications(hass)
+
+    async def handle_clear_all_notifications(call: ServiceCall) -> None:
+        """Clear all current notifications from the feed."""
+        storage: NotificationStorage = hass.data[DOMAIN]["storage"]
+        entity_notifications = hass.data[DOMAIN].get("entity_notifications", {})
+        entity_source_ids = list(entity_notifications.keys())
+        await storage.async_dismiss_entity_notifications(entity_source_ids)
+        entity_notifications.clear()
+        hass.data[DOMAIN]["manual_notifications"] = {}
+        await storage.async_clear_all_manual_notifications()
+        for source_id in list(hass.data[DOMAIN].get("active_notifications", {}).keys()):
+            await storage.async_clear_acknowledge(source_id)
+            await storage.async_clear_last_repeat(source_id)
         await _rebuild_active_notifications(hass)
 
     async def handle_snooze(call: ServiceCall) -> None:
@@ -430,7 +520,9 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, SERVICE_REGISTER_SOURCE, handle_register_source)
     hass.services.async_register(DOMAIN, SERVICE_PUSH_NOTIFICATION, handle_push_notification)
+    hass.services.async_register(DOMAIN, SERVICE_SET_AUTO_CLEAR_DEFAULTS, handle_set_auto_clear_defaults)
     hass.services.async_register(DOMAIN, SERVICE_CLEAR_NOTIFICATION, handle_clear_notification)
+    hass.services.async_register(DOMAIN, SERVICE_CLEAR_ALL_NOTIFICATIONS, handle_clear_all_notifications)
     hass.services.async_register(DOMAIN, SERVICE_EXECUTE_TAP_ACTION, handle_execute_tap_action)
     hass.services.async_register(DOMAIN, SERVICE_SNOOZE, handle_snooze)
     hass.services.async_register(DOMAIN, SERVICE_UNSNOOZE, handle_unsnooze)
@@ -465,7 +557,16 @@ def _async_setup_automations(hass: HomeAssistant) -> None:
         is_on = new_state.state == "on"
         was_on = old_state.state == "on" if old_state else False
 
+        if not is_on:
+            await storage.async_clear_dismissed(source_id)
+
         if await storage.async_is_snoozed(source_id):
+            if source_id in entity_notifications:
+                del entity_notifications[source_id]
+                await _rebuild_active_notifications(hass)
+            return
+
+        if is_on and await storage.async_is_dismissed(source_id):
             if source_id in entity_notifications:
                 del entity_notifications[source_id]
                 await _rebuild_active_notifications(hass)

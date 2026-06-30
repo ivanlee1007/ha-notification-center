@@ -8,7 +8,10 @@
           "notify_service": "Mobile push notify service (e.g. notify)",
           "email_service": "Email notify service (optional, e.g. notify.gmail_smtp)",
           "critical_repeat_interval": "Critical alert repeat interval (minutes)",
-          "battery_threshold": "Low battery threshold (%)"
+          "battery_threshold": "Low battery threshold (%)",
+          "default_auto_clear_info_seconds": "Info auto-clear time (seconds, 0 disables)",
+          "default_auto_clear_warning_seconds": "Warning auto-clear time (seconds, 0 disables)",
+          "default_auto_clear_critical_seconds": "Critical auto-clear time (seconds, 0 disables)"
         }
       }
     },
@@ -24,7 +27,10 @@
           "notify_service": "Mobile push notify service",
           "email_service": "Email notify service (optional)",
           "critical_repeat_interval": "Critical alert repeat interval (minutes)",
-          "battery_threshold": "Low battery threshold (%)"
+          "battery_threshold": "Low battery threshold (%)",
+          "default_auto_clear_info_seconds": "Info auto-clear time (seconds, 0 disables)",
+          "default_auto_clear_warning_seconds": "Warning auto-clear time (seconds, 0 disables)",
+          "default_auto_clear_critical_seconds": "Critical auto-clear time (seconds, 0 disables)"
         }
       }
     }

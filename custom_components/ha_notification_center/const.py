@@ -47,6 +47,8 @@ SERVICE_TOGGLE_DROPDOWN: Final = "toggle_dropdown"
 SERVICE_PUSH_NOTIFICATION: Final = "push_notification"
 SERVICE_CLEAR_NOTIFICATION: Final = "clear_notification"
 SERVICE_EXECUTE_TAP_ACTION: Final = "execute_tap_action"
+SERVICE_CLEAR_ALL_NOTIFICATIONS: Final = "clear_all_notifications"
+SERVICE_SET_AUTO_CLEAR_DEFAULTS: Final = "set_auto_clear_defaults"
 
 # Events
 EVENT_SOURCE_ACTIVATED: Final = "ha_notification_center_source_activated"
@@ -58,6 +60,9 @@ CONF_NOTIFY_SERVICE: Final = "notify_service"
 CONF_EMAIL_SERVICE: Final = "email_service"
 CONF_CRITICAL_REPEAT_INTERVAL: Final = "critical_repeat_interval"
 CONF_BATTERY_THRESHOLD: Final = "battery_threshold"
+CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS: Final = "default_auto_clear_info_seconds"
+CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS: Final = "default_auto_clear_warning_seconds"
+CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS: Final = "default_auto_clear_critical_seconds"
 
 # Storage
 STORAGE_KEY: Final = "ha_notification_center"

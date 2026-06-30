@@ -24,6 +24,9 @@ from .const import (
     CONF_CRITICAL_REPEAT_INTERVAL,
     CONF_EMAIL_SERVICE,
     CONF_NOTIFY_SERVICE,
+    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
     DOMAIN,
 )
 
@@ -60,6 +63,15 @@ class NotificationCenterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_BATTERY_THRESHOLD, default=20
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+                    vol.Optional(
+                        CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, default=3600
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=604800)),
+                    vol.Optional(
+                        CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, default=0
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=604800)),
+                    vol.Optional(
+                        CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, default=0
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=604800)),
                 }
             ),
             errors=errors,
@@ -106,6 +118,18 @@ class NotificationCenterOptionsFlow(config_entries.OptionsFlow):
                         CONF_BATTERY_THRESHOLD,
                         default=self._current_value(CONF_BATTERY_THRESHOLD, 20),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+                    vol.Optional(
+                        CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
+                        default=self._current_value(CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, 3600),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=604800)),
+                    vol.Optional(
+                        CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
+                        default=self._current_value(CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, 0),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=604800)),
+                    vol.Optional(
+                        CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
+                        default=self._current_value(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, 0),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=604800)),
                 }
             ),
         )
