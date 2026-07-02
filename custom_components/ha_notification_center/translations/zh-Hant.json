@@ -9,9 +9,9 @@
           "email_service": "Email 通知服務（選填，例如 notify.gmail_smtp）",
           "critical_repeat_interval": "緊急警報重複間隔（分鐘）",
           "battery_threshold": "低電量警示閾值（%）",
-          "default_auto_clear_info_seconds": "資訊告警自動消失時間（秒，0 表示不自動消失）",
-          "default_auto_clear_warning_seconds": "警告告警自動消失時間（秒，0 表示不自動消失）",
-          "default_auto_clear_critical_seconds": "緊急告警自動消失時間（秒，0 表示不自動消失）"
+          "default_auto_clear_info_minutes": "資訊告警自動消失時間（分鐘，0 表示不自動消失）",
+          "default_auto_clear_warning_minutes": "警告告警自動消失時間（分鐘，0 表示不自動消失）",
+          "default_auto_clear_critical_minutes": "緊急告警自動消失時間（分鐘，0 表示不自動消失）"
         }
       }
     },
@@ -28,9 +28,9 @@
           "email_service": "Email 通知服務（選填）",
           "critical_repeat_interval": "緊急警報重複間隔（分鐘）",
           "battery_threshold": "低電量警示閾值（%）",
-          "default_auto_clear_info_seconds": "資訊告警自動消失時間（秒，0 表示不自動消失）",
-          "default_auto_clear_warning_seconds": "警告告警自動消失時間（秒，0 表示不自動消失）",
-          "default_auto_clear_critical_seconds": "緊急告警自動消失時間（秒，0 表示不自動消失）"
+          "default_auto_clear_info_minutes": "資訊告警自動消失時間（分鐘，0 表示不自動消失）",
+          "default_auto_clear_warning_minutes": "警告告警自動消失時間（分鐘，0 表示不自動消失）",
+          "default_auto_clear_critical_minutes": "緊急告警自動消失時間（分鐘，0 表示不自動消失）"
         }
       }
     }

@@ -146,15 +146,15 @@ push_notification:
       example: '{"entity_id": "switch.pump_main"}'
       selector:
         object:
-    auto_clear_seconds:
-      description: "Optional TTL in seconds. When reached, the notification is auto-cleared."
+    auto_clear_minutes:
+      description: "Optional TTL in minutes. When reached, the notification is auto-cleared."
       required: false
-      example: 3600
+      example: 60
       selector:
         number:
           min: 1
-          max: 604800
-          unit_of_measurement: seconds
+          max: 10080
+          unit_of_measurement: minutes
 
 clear_notification:
   name: Clear Notification
@@ -174,35 +174,35 @@ clear_all_notifications:
 
 set_auto_clear_defaults:
   name: Set Auto-Clear Defaults
-  description: Set priority-based default auto-clear times in seconds. Use 0 to disable auto-clear for that priority.
+  description: Set priority-based default auto-clear times in minutes. Use 0 to disable auto-clear for that priority.
   fields:
-    info_seconds:
-      description: "Default auto-clear time for info notifications in seconds. 0 disables auto-clear."
+    info_minutes:
+      description: "Default auto-clear time for info notifications in minutes. 0 disables auto-clear."
       required: true
-      example: 3600
+      example: 60
       selector:
         number:
           min: 0
-          max: 604800
-          unit_of_measurement: seconds
-    warning_seconds:
-      description: "Default auto-clear time for warning notifications in seconds. 0 disables auto-clear."
-      required: true
-      example: 0
-      selector:
-        number:
-          min: 0
-          max: 604800
-          unit_of_measurement: seconds
-    critical_seconds:
-      description: "Default auto-clear time for critical notifications in seconds. 0 disables auto-clear."
+          max: 10080
+          unit_of_measurement: minutes
+    warning_minutes:
+      description: "Default auto-clear time for warning notifications in minutes. 0 disables auto-clear."
       required: true
       example: 0
       selector:
         number:
           min: 0
-          max: 604800
-          unit_of_measurement: seconds
+          max: 10080
+          unit_of_measurement: minutes
+    critical_minutes:
+      description: "Default auto-clear time for critical notifications in minutes. 0 disables auto-clear."
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 10080
+          unit_of_measurement: minutes
 
 execute_tap_action:
   name: Execute Notification Tap Action

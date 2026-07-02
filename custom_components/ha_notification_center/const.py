@@ -60,9 +60,9 @@ CONF_NOTIFY_SERVICE: Final = "notify_service"
 CONF_EMAIL_SERVICE: Final = "email_service"
 CONF_CRITICAL_REPEAT_INTERVAL: Final = "critical_repeat_interval"
 CONF_BATTERY_THRESHOLD: Final = "battery_threshold"
-CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS: Final = "default_auto_clear_info_seconds"
-CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS: Final = "default_auto_clear_warning_seconds"
-CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS: Final = "default_auto_clear_critical_seconds"
+CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES: Final = "default_auto_clear_info_minutes"
+CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES: Final = "default_auto_clear_warning_minutes"
+CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES: Final = "default_auto_clear_critical_minutes"
 
 # Storage
 STORAGE_KEY: Final = "ha_notification_center"

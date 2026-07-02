@@ -9,9 +9,9 @@
           "email_service": "Email notify service (optional, e.g. notify.gmail_smtp)",
           "critical_repeat_interval": "Critical alert repeat interval (minutes)",
           "battery_threshold": "Low battery threshold (%)",
-          "default_auto_clear_info_seconds": "Info auto-clear time (seconds, 0 disables)",
-          "default_auto_clear_warning_seconds": "Warning auto-clear time (seconds, 0 disables)",
-          "default_auto_clear_critical_seconds": "Critical auto-clear time (seconds, 0 disables)"
+          "default_auto_clear_info_minutes": "Info auto-clear time (minutes, 0 disables)",
+          "default_auto_clear_warning_minutes": "Warning auto-clear time (minutes, 0 disables)",
+          "default_auto_clear_critical_minutes": "Critical auto-clear time (minutes, 0 disables)"
         }
       }
     },
@@ -28,9 +28,9 @@
           "email_service": "Email notify service (optional)",
           "critical_repeat_interval": "Critical alert repeat interval (minutes)",
           "battery_threshold": "Low battery threshold (%)",
-          "default_auto_clear_info_seconds": "Info auto-clear time (seconds, 0 disables)",
-          "default_auto_clear_warning_seconds": "Warning auto-clear time (seconds, 0 disables)",
-          "default_auto_clear_critical_seconds": "Critical auto-clear time (seconds, 0 disables)"
+          "default_auto_clear_info_minutes": "Info auto-clear time (minutes, 0 disables)",
+          "default_auto_clear_warning_minutes": "Warning auto-clear time (minutes, 0 disables)",
+          "default_auto_clear_critical_minutes": "Critical auto-clear time (minutes, 0 disables)"
         }
       }
     }

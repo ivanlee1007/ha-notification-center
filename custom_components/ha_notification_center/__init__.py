@@ -48,9 +48,9 @@ from .const import (
     ATTR_TAP_ACTION_SERVICE_DATA,
     ATTR_TAP_ACTION_SERVICE_DOMAIN,
     ATTR_TIMESTAMP,
-    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
-    CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
-    CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
+    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES,
+    CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES,
+    CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES,
     DOMAIN,
     PRIORITY_CRITICAL,
     PRIORITY_INFO,
@@ -72,25 +72,25 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 SCAN_INTERVAL = timedelta(seconds=5)
-AUTO_CLEAR_MAX_SECONDS = 604800
+AUTO_CLEAR_MAX_MINUTES = 10080
 
 
-def _coerce_auto_clear_seconds(value: Any, *, default: int = 0) -> int:
-    """Return a bounded auto-clear duration in seconds."""
+def _coerce_auto_clear_minutes(value: Any, *, default: int = 0) -> int:
+    """Return a bounded auto-clear duration in minutes."""
     try:
-        seconds = int(value)
+        minutes = int(value)
     except (TypeError, ValueError):
         return default
-    return min(max(seconds, 0), AUTO_CLEAR_MAX_SECONDS)
+    return min(max(minutes, 0), AUTO_CLEAR_MAX_MINUTES)
 
 
 def _auto_clear_defaults(hass: HomeAssistant) -> dict[str, int]:
     """Return the current priority-based default auto-clear durations."""
     data = hass.data.get(DOMAIN, {})
     return {
-        PRIORITY_INFO: _coerce_auto_clear_seconds(data.get(CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, 3600)),
-        PRIORITY_WARNING: _coerce_auto_clear_seconds(data.get(CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, 0)),
-        PRIORITY_CRITICAL: _coerce_auto_clear_seconds(data.get(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, 0)),
+        PRIORITY_INFO: _coerce_auto_clear_minutes(data.get(CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES, 60)),
+        PRIORITY_WARNING: _coerce_auto_clear_minutes(data.get(CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES, 0)),
+        PRIORITY_CRITICAL: _coerce_auto_clear_minutes(data.get(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES, 0)),
     }
 
 
@@ -225,9 +225,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     domain_data["email_service"] = None
     domain_data["critical_repeat_interval"] = 10
     domain_data["battery_threshold"] = 20
-    domain_data[CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS] = 3600
-    domain_data[CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS] = 0
-    domain_data[CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS] = 0
+    domain_data[CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES] = 60
+    domain_data[CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES] = 0
+    domain_data[CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES] = 0
     domain_data["dropdown_open"] = False
     await _rebuild_active_notifications(hass)
     return True
@@ -249,23 +249,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["battery_threshold"] = options.get(
         "battery_threshold", entry.data.get("battery_threshold", 20)
     )
-    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS] = _coerce_auto_clear_seconds(
+    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES] = _coerce_auto_clear_minutes(
         options.get(
-            CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS,
-            entry.data.get(CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS, 3600),
+            CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES,
+            entry.data.get(
+                CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES,
+                int(entry.data.get("default_auto_clear_info_seconds", 3600) / 60),
+            ),
         ),
-        default=3600,
+        default=60,
     )
-    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS] = _coerce_auto_clear_seconds(
+    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES] = _coerce_auto_clear_minutes(
         options.get(
-            CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS,
-            entry.data.get(CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS, 0),
+            CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES,
+            entry.data.get(
+                CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES,
+                int(entry.data.get("default_auto_clear_warning_seconds", 0) / 60),
+            ),
         )
     )
-    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS] = _coerce_auto_clear_seconds(
+    hass.data[DOMAIN][CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES] = _coerce_auto_clear_minutes(
         options.get(
-            CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS,
-            entry.data.get(CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS, 0),
+            CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES,
+            entry.data.get(
+                CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES,
+                int(entry.data.get("default_auto_clear_critical_seconds", 0) / 60),
+            ),
         )
     )
 
@@ -330,14 +339,14 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         priority = str(data.get(ATTR_PRIORITY) or PRIORITY_INFO)
         if priority not in (PRIORITY_INFO, PRIORITY_WARNING, PRIORITY_CRITICAL):
             priority = PRIORITY_INFO
-        auto_clear_seconds = data.get("auto_clear_seconds")
-        if auto_clear_seconds in (None, ""):
-            auto_clear_seconds = _auto_clear_defaults(hass).get(priority, 0)
+        auto_clear_minutes = data.get("auto_clear_minutes")
+        if auto_clear_minutes in (None, ""):
+            auto_clear_minutes = _auto_clear_defaults(hass).get(priority, 0)
 
         expires_at = None
-        auto_clear_seconds = _coerce_auto_clear_seconds(auto_clear_seconds)
-        if auto_clear_seconds > 0:
-            expires_at = (datetime.now() + timedelta(seconds=auto_clear_seconds)).isoformat()
+        auto_clear_minutes = _coerce_auto_clear_minutes(auto_clear_minutes)
+        if auto_clear_minutes > 0:
+            expires_at = (datetime.now() + timedelta(minutes=auto_clear_minutes)).isoformat()
 
         tap_action_action = data.get(ATTR_TAP_ACTION_ACTION)
         validated_tap_action_action: list[dict[str, Any]] = []
@@ -423,23 +432,32 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_set_auto_clear_defaults(call: ServiceCall) -> None:
         """Update priority-based default auto-clear durations."""
-        info_seconds = _coerce_auto_clear_seconds(call.data.get("info_seconds"), default=3600)
-        warning_seconds = _coerce_auto_clear_seconds(call.data.get("warning_seconds"))
-        critical_seconds = _coerce_auto_clear_seconds(call.data.get("critical_seconds"))
+        info_minutes_raw = call.data.get("info_minutes")
+        warning_minutes_raw = call.data.get("warning_minutes")
+        critical_minutes_raw = call.data.get("critical_minutes")
+        if info_minutes_raw in (None, "") and call.data.get("info_seconds") not in (None, ""):
+            info_minutes_raw = int(call.data.get("info_seconds") / 60)
+        if warning_minutes_raw in (None, "") and call.data.get("warning_seconds") not in (None, ""):
+            warning_minutes_raw = int(call.data.get("warning_seconds") / 60)
+        if critical_minutes_raw in (None, "") and call.data.get("critical_seconds") not in (None, ""):
+            critical_minutes_raw = int(call.data.get("critical_seconds") / 60)
+        info_minutes = _coerce_auto_clear_minutes(info_minutes_raw, default=60)
+        warning_minutes = _coerce_auto_clear_minutes(warning_minutes_raw)
+        critical_minutes = _coerce_auto_clear_minutes(critical_minutes_raw)
 
         domain_data = hass.data[DOMAIN]
-        domain_data[CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS] = info_seconds
-        domain_data[CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS] = warning_seconds
-        domain_data[CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS] = critical_seconds
+        domain_data[CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES] = info_minutes
+        domain_data[CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES] = warning_minutes
+        domain_data[CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES] = critical_minutes
 
         entry: ConfigEntry | None = domain_data.get("config_entry")
         if entry:
             new_options = dict(entry.options)
             new_options.update(
                 {
-                    CONF_DEFAULT_AUTO_CLEAR_INFO_SECONDS: info_seconds,
-                    CONF_DEFAULT_AUTO_CLEAR_WARNING_SECONDS: warning_seconds,
-                    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_SECONDS: critical_seconds,
+                    CONF_DEFAULT_AUTO_CLEAR_INFO_MINUTES: info_minutes,
+                    CONF_DEFAULT_AUTO_CLEAR_WARNING_MINUTES: warning_minutes,
+                    CONF_DEFAULT_AUTO_CLEAR_CRITICAL_MINUTES: critical_minutes,
                 }
             )
             hass.config_entries.async_update_entry(entry, options=new_options)
